@@ -1,0 +1,44 @@
+{
+   "action": {
+      "default_icon": {
+         "128": "images/icon128.png",
+         "16": "images/icon16.png",
+         "32": "images/icon32.png",
+         "48": "images/icon48.png"
+      },
+      "default_title": "Flow Image Automator - Bulk AI Image Generation for Google Labs"
+   },
+   "background": {
+      "service_worker": "background.js",
+      "type": "module"
+   },
+   "content_scripts": [ {
+      "js": [ "flowContentScript.js" ],
+      "matches": [ "https://labs.google/fx/tools/flow/*", "https://labs.google/fx/*/tools/flow/*" ],
+      "run_at": "document_idle"
+   } ],
+   "content_security_policy": {
+      "extension_pages": "script-src 'self'; object-src 'self'"
+   },
+   "description": "Automate Google Labs image generation. Bulk create AI images with Imagen 4, Nano Bana 2, and Nano Banana Pro models.",
+   "host_permissions": [ "https://labs.google/*", "http://*/*", "https://*/*" ],
+   "icons": {
+      "128": "images/icon128.png",
+      "16": "images/icon16.png",
+      "32": "images/icon32.png",
+      "48": "images/icon48.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApy2ZmS4BzSNQmrxsKa4yNDjhsBPADJWlIBo4JCFBsaqAoLcQ+0z0hkL4eSPf0yncQM0J+QDE6ckCQzlNo4kjqmcrZjlV0enHMuSHNd+G0QHBnh9e0SIos/No01O4nYfQUHC3jyIaVmNHcKXbdHxiYEXsBQJBBPf/tZBAcK3l2/8WJafuEnV/TZISLtttsXfEhx+uvRppIGN/3JUmFDtFcgQWccz4zMB9w1g9KcGW4EL5+ExG96Uw4W7AC8ktk09d1RKa/AFyVnp7Wri97xPLiMisQXJZ21FCHw7RsnR6IhXzLHM1aLt8lK49Oh2nymHsAxcbwOOy68LbKM/ZnWfyYwIDAQAB",
+   "manifest_version": 3,
+   "name": "Flow Image Automator - Bulk AI Image Generation for Google Labs",
+   "permissions": [ "activeTab", "storage", "sidePanel", "identity", "tabs", "scripting", "downloads", "offscreen" ],
+   "side_panel": {
+      "default_path": "./src/index.html"
+   },
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "2.0.1",
+   "web_accessible_resources": [ {
+      "matches": [ "https://labs.google/*" ],
+      "resources": [ "alwaysActive.js", "alwaysActiveIsolated.js" ]
+   } ]
+}
