@@ -28,14 +28,12 @@
       "32": "images/icon32.png",
       "48": "images/icon48.png"
    },
-   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApy2ZmS4BzSNQmrxsKa4yNDjhsBPADJWlIBo4JCFBsaqAoLcQ+0z0hkL4eSPf0yncQM0J+QDE6ckCQzlNo4kjqmcrZjlV0enHMuSHNd+G0QHBnh9e0SIos/No01O4nYfQUHC3jyIaVmNHcKXbdHxiYEXsBQJBBPf/tZBAcK3l2/8WJafuEnV/TZISLtttsXfEhx+uvRppIGN/3JUmFDtFcgQWccz4zMB9w1g9KcGW4EL5+ExG96Uw4W7AC8ktk09d1RKa/AFyVnp7Wri97xPLiMisQXJZ21FCHw7RsnR6IhXzLHM1aLt8lK49Oh2nymHsAxcbwOOy68LbKM/ZnWfyYwIDAQAB",
    "manifest_version": 3,
    "name": "Flow Image Automator - Bulk AI Image Generation for Google Labs",
-   "permissions": [ "activeTab", "storage", "sidePanel", "identity", "tabs", "scripting", "downloads", "offscreen" ],
+   "permissions": [ "activeTab", "storage", "sidePanel", "tabs", "scripting", "downloads" ],
    "side_panel": {
       "default_path": "./src/index.html"
    },
-   "update_url": "https://clients2.google.com/service/update2/crx",
    "version": "2.0.1",
    "web_accessible_resources": [ {
       "matches": [ "https://labs.google/*" ],
