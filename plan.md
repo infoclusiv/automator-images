@@ -1,250 +1,258 @@
-# plan.md — Remover Autenticación y Quota Tracking
 
-## Objetivo
-Eliminar toda la lógica de autenticación (Google OAuth, Firebase Auth) y el seguimiento de cuotas (quota tracking via Firestore) de la extensión, manteniendo toda la funcionalidad operativa. La estrategia es modificar **solo los archivos legibles** (`background.js`, `offscreen.js`, `manifest.json`) ya que `main.js`, `flowContentScript.js`, `queueDB.js` y `userData.js` están minificados/bundleados y no se pueden editar directamente. Esos archivos se comunican con `background.js` vía mensajes, así que si `background.js` siempre responde como "autenticado + suscripción activa + sin límites", la app funcionará sin restricciones.
+# Plan: Eliminación Completa del Sistema de Login
+
+## 📋 Diagnóstico
+
+Tras analizar el repositorio, el `background.js`, `offscreen.js` y `manifest.json` **ya tienen los bypasses de autenticación aplicados** (variables hardcodeadas, handlers que siempre responden `isLoggedIn: true`, permisos `identity`/`offscreen` removidos). Sin embargo, el login probablemente sigue apareciendo porque:
+
+1. **`userData.js`** (minificado) — Se carga en `src/index.html` y `src/offscreen.html`. Contiene lógica Firebase Auth/Firestore que `main.js` importa directamente. Si Firebase falla al inicializar o no encuentra un usuario autenticado, `main.js` muestra la pantalla de login.
+2. **`main.js`** (minificado) — Importa funciones de `userData.js` y condiciona la UI según el estado que éstas devuelven.
+
+**Estrategia:** Dado que `main.js` está minificado y no se puede editar, la solución es **reemplazar `userData.js`** con un mock que exporte la misma interfaz pero siempre devuelva estado autenticado. Así `main.js` recibe datos positivos sin cambiar una línea de su código.
 
 ---
 
-## Archivo 1: `background.js`
+## Archivo 1: `userData.js` — Reemplazar con mock completo
 
-### 1.1 — Inicializar variables de estado como siempre autenticado
+### Paso 1.1 — Inspeccionar exports actuales
 
-Cambiar las declaraciones iniciales:
-
-```js
-// ANTES
-let m=!1,l=null,d=null,b=null;
-
-// DESPUÉS
-let m=!0,l="active",d="local-user",b=null;
+Antes de reemplazar, el agente debe abrir `userData.js` y extraer **todos los nombres exportados**. Buscar patrones como:
+```
+export { ... }
+export const ...
+export function ...
+export default ...
 ```
 
-### 1.2 — Eliminar función `L()` (creación de offscreen document)
+En código minificado, buscar `export{` o `export const` al final del archivo.
 
-Eliminar completamente la función `L()` que crea el offscreen document para Firebase:
+### Paso 1.2 — Crear `userData.js` mock
 
-```js
-// ELIMINAR TODA ESTA FUNCIÓN:
-async function L(){(await chrome.runtime.getContexts({contextTypes:["OFFSCREEN_DOCUMENT"],documentUrls:[chrome.runtime.getURL("src/offscreen.html")]})).length>0||(b?await b:(b=chrome.offscreen.createDocument({url:"src/offscreen.html",reasons:["WORKERS"],justification:"Handle Firebase Firestore operations for quota tracking when sidepanel is closed"}),await b,b=null))}
-```
-
-### 1.3 — Eliminar función `P()` (mensajería con offscreen document)
-
-Eliminar completamente la función `P()`:
+Reemplazar **todo el contenido** de `userData.js` con un módulo que exporte stubs. El siguiente template cubre las funciones Firebase Auth + Firestore más comunes. **El agente debe ajustar los nombres de export para que coincidan con los encontrados en el paso 1.1:**
 
 ```js
-// ELIMINAR TODA ESTA FUNCIÓN:
-async function P(e){return await L(),new Promise((o,t)=>{chrome.runtime.sendMessage(e,s=>{chrome.runtime.lastError?t(chrome.runtime.lastError):o(s)})})}
+// userData.js — Mock (sin Firebase, sin autenticación real)
+
+// ── Auth Mock ──────────────────────────────────────────────
+const mockUser = {
+  uid: "local-user",
+  email: "local@bypass.ext",
+  displayName: "Local User",
+  photoURL: null,
+  emailVerified: true,
+  isAnonymous: false,
+  getIdToken: async () => "local-bypass-token",
+  toJSON: () => ({ uid: "local-user", email: "local@bypass.ext" }),
+};
+
+const mockAuth = {
+  currentUser: mockUser,
+  onAuthStateChanged: (cb) => { 
+    setTimeout(() => cb(mockUser), 0); 
+    return () => {}; // unsubscribe
+  },
+  signOut: async () => {},
+};
+
+// ── Firestore Mock ─────────────────────────────────────────
+const mockDocSnap = {
+  exists: () => true,
+  data: () => ({
+    subscriptionStatus: "active",
+    isPaid: true,
+    remaining: 999999,
+    canContinue: true,
+    status: "active",
+    userId: "local-user",
+  }),
+  id: "local-user",
+};
+
+const noop = async () => {};
+const noopDoc = async () => mockDocSnap;
+
+// ── Exports ────────────────────────────────────────────────
+// IMPORTANTE: el agente debe verificar que estos nombres
+// coincidan con los que main.js importa del userData.js original.
+
+export const auth = mockAuth;
+export const db = {};
+export const app = {};
+
+// Auth functions
+export const signInWithCredential = async () => ({ user: mockUser });
+export const signInWithPopup = async () => ({ user: mockUser });
+export const signInWithCustomToken = async () => ({ user: mockUser });
+export const onAuthStateChanged = mockAuth.onAuthStateChanged;
+export const signOut = async () => {};
+export const getAuth = () => mockAuth;
+export const GoogleAuthProvider = class { 
+  static credential() { return {}; } 
+};
+export const OAuthProvider = class {
+  constructor() {}
+  credential() { return {}; }
+};
+
+// Firestore functions
+export const getFirestore = () => ({});
+export const doc = () => ({});
+export const getDoc = noopDoc;
+export const setDoc = noop;
+export const updateDoc = noop;
+export const deleteDoc = noop;
+export const collection = () => ({});
+export const query = () => ({});
+export const where = () => ({});
+export const getDocs = async () => ({ docs: [], empty: true, size: 0, forEach: () => {} });
+export const onSnapshot = (ref, cb) => { 
+  setTimeout(() => cb(mockDocSnap), 0); 
+  return () => {}; 
+};
+export const addDoc = async () => ({ id: "mock-id" });
+export const serverTimestamp = () => new Date().toISOString();
+export const increment = (n) => n;
+export const arrayUnion = (...args) => args;
+
+// User data helpers (nombres comunes en extensiones con este patrón)
+export const getUserData = async () => mockDocSnap.data();
+export const updateUserData = noop;
+export const checkSubscription = async () => ({ 
+  status: "active", isPaid: true, canContinue: true, remaining: 999999 
+});
+export const checkQuota = async () => ({ 
+  canContinue: true, isPaid: true, remaining: 999999, status: "active" 
+});
+export const updateQuota = noop;
+export const initializeUser = noop;
+export const setUserId = noop;
+
+// Catch-all default export
+export default {
+  auth: mockAuth,
+  db: {},
+  app: {},
+  mockUser,
+};
 ```
 
-### 1.4 — Eliminar bloque de carga de authState desde storage
+### Paso 1.3 — Verificar que no se rompen imports
 
-Eliminar el bloque que lee `authState` del storage al inicio (ya no es necesario porque siempre estamos "logueados"):
-
-```js
-// ELIMINAR ESTE BLOQUE:
-chrome.storage.local.get(["authState"],e=>{e.authState&&(m=e.authState.isLoggedIn||!1,l=e.authState.subscriptionStatus||null,d=e.authState.userId||null,setTimeout(()=>{v()},1e3))});
-```
-
-### 1.5 — Simplificar función `E()` (guardar authState en storage)
-
-Reemplazar para que siempre guarde estado autenticado:
-
-```js
-// ANTES
-function E(){const e={isLoggedIn:m,subscriptionStatus:l,userId:d,lastUpdated:Date.now()};chrome.storage.local.set({authState:e},()=>{})}
-
-// DESPUÉS
-function E(){const e={isLoggedIn:!0,subscriptionStatus:"active",userId:"local-user",lastUpdated:Date.now()};chrome.storage.local.set({authState:e},()=>{})}
-```
-
-### 1.6 — Modificar `onInstalled` listener
-
-Cambiar `authRequired` a `false` y establecer quotaStatus como siempre permitido:
-
-```js
-// ANTES
-chrome.runtime.onInstalled.addListener(e=>{if(chrome.storage.local.set({autoUpscale:!1,autoDownload:!0,delayBetweenPrompts:5,authRequired:!0,quotaStatus:{isCheckingQuota:!1,canContinue:!0,lastChecked:Date.now()}}), ...
-
-// DESPUÉS
-chrome.runtime.onInstalled.addListener(e=>{if(chrome.storage.local.set({autoUpscale:!1,autoDownload:!0,delayBetweenPrompts:5,authRequired:!1,authState:{isLoggedIn:!0,subscriptionStatus:"active",userId:"local-user",lastUpdated:Date.now()},quotaStatus:{isCheckingQuota:!1,canContinue:!0,isPaid:!0,remaining:999999,status:"active",lastChecked:Date.now()}}), ...
-```
-
-(Mantener el resto del listener igual — la parte que abre la URL en `install`.)
-
-### 1.7 — Eliminar variable `p` (contador de procesados para quota)
-
-```js
-// ELIMINAR:
-let p=0;
-```
-
-### 1.8 — Modificar handler `updateProgress`
-
-Eliminar toda la lógica de quota tracking. Solo responder con éxito:
-
-```js
-// ANTES
-if(e.action==="updateProgress"){const r=p,a=e.processed-r;return a>0&&d&&(p=e.processed,P({action:"updateQuota",userId:d,newlyProcessed:a}).then(n=>{n.success&&chrome.runtime.sendMessage({action:"quotaUpdated",quotaData:n.quotaData}).catch(()=>{})}).catch(n=>{})),t({received:!0}),!0}
-
-// DESPUÉS
-if(e.action==="updateProgress"){return t({received:!0}),!0}
-```
-
-### 1.9 — Modificar handler `signInWithGoogle`
-
-Reemplazar toda la lógica de OAuth por una respuesta exitosa inmediata con un token falso:
-
-```js
-// ANTES (todo el bloque de signInWithGoogle con chrome.identity.launchWebAuthFlow)
-
-// DESPUÉS
-if(e.action==="signInWithGoogle"){return t({success:!0,token:"local-bypass-token"}),!0}
-```
-
-### 1.10 — Modificar handler `getAuthState`
-
-Siempre devolver estado autenticado con suscripción activa:
-
-```js
-// ANTES
-else if(e.action==="getAuthState"){const r={isLoggedIn:m,subscriptionStatus:l,userId:d,timestamp:Date.now()};return t(r),!0}
-
-// DESPUÉS
-else if(e.action==="getAuthState"){const r={isLoggedIn:!0,subscriptionStatus:"active",userId:"local-user",timestamp:Date.now()};return t(r),!0}
-```
-
-### 1.11 — Modificar handler `authStateChanged`
-
-Simplificar para que solo responda con éxito sin modificar estado (ya es siempre activo):
-
-```js
-// ANTES (bloque completo de authStateChanged con lógica de userId, subscriptionStatus, etc.)
-
-// DESPUÉS
-else if(e.action==="authStateChanged"){return E(),t({success:!0}),!0}
-```
-
-### 1.12 — Mantener handler `authStateRefreshed` sin cambios
-
-```js
-// Este se queda igual:
-if(e.action==="authStateRefreshed")return t({received:!0}),!0;
-```
-
-### 1.13 — Modificar handler `getQuotaStatus`
-
-Siempre devolver cuota ilimitada:
-
-```js
-// ANTES
-if(e.action==="getQuotaStatus")return chrome.storage.local.get("quotaStatus",r=>{const a={canContinue:!0,isPaid:l==="active",status:"unknown"},n=r.quotaStatus||a;l==="active"&&(n.isPaid=!0,n.canContinue=!0),t(n)}),!0;
-
-// DESPUÉS
-if(e.action==="getQuotaStatus")return t({canContinue:!0,isPaid:!0,remaining:999999,status:"active",lastChecked:Date.now()}),!0;
-```
-
-### 1.14 — Modificar handler `updateQuotaStatus`
-
-Simplificar a solo confirmar sin guardar nada:
-
-```js
-// ANTES
-if(e.action==="updateQuotaStatus"){const r={...e.quotaStatus,lastChecked:Date.now(),isPaid:l==="active"||e.quotaStatus.isPaid};return chrome.storage.local.set({quotaStatus:r},()=>{t({success:!0})}),!0}
-
-// DESPUÉS
-if(e.action==="updateQuotaStatus"){return t({success:!0}),!0}
-```
-
-### 1.15 — Modificar función `v()` (broadcast de authState a tabs)
-
-Siempre emitir estado autenticado:
-
-```js
-// ANTES
-function v(){const e={action:"authStateChanged",isLoggedIn:m,subscriptionStatus:l,userId:d,timestamp:Date.now()};...}
-
-// DESPUÉS
-function v(){const e={action:"authStateChanged",isLoggedIn:!0,subscriptionStatus:"active",userId:"local-user",timestamp:Date.now()};chrome.tabs.query({},o=>{o.forEach(t=>{t.url&&t.url.includes("labs.google")&&chrome.tabs.sendMessage(t.id,e).catch(s=>{})})})}
-```
-
-### 1.16 — Modificar listeners de `tabs.onActivated` y `windows.onFocusChanged`
-
-Actualizar los mensajes de authState que envían para que siempre digan autenticado:
-
-```js
-// En tabs.onActivated, cambiar el mensaje enviado:
-// isLoggedIn:m,subscriptionStatus:l,userId:d
-// POR:
-// isLoggedIn:!0,subscriptionStatus:"active",userId:"local-user"
-
-// Lo mismo en windows.onFocusChanged
-```
-
-### 1.17 — Eliminar el `setInterval` de refresco de authState
-
-Eliminar completamente el bloque:
-
-```js
-// ELIMINAR:
-setInterval(()=>{chrome.storage.local.get(["authState"],e=>{if(e.authState){const o=e.authState;Date.now()-o.lastUpdated>10*60*1e3}})},5*60*1e3);
-```
+Después de reemplazar, el agente debe:
+1. Cargar la extensión en `chrome://extensions` (modo desarrollador)
+2. Abrir la consola del service worker → verificar que no hay errores de imports
+3. Abrir el sidepanel → verificar la consola DevTools del sidepanel por errores tipo `... is not a function` o `... is not exported`
+4. Si hay errores, agregar los exports faltantes al mock
 
 ---
 
-## Archivo 2: `offscreen.js`
+## Archivo 2: `src/offscreen.html` — Limpiar dependencia Firebase
 
-Reemplazar todo el contenido con un stub mínimo que responde a cualquier mensaje con éxito. Esto es necesario por si algún código residual en `main.js` o `userData.js` intenta comunicarse:
+Reemplazar el contenido para eliminar la carga de `userData.js` (ya no necesita Firebase):
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offscreen Document</title>
+  <script type="module" crossorigin src="/offscreen.js"></script>
+</head>
+<body>
+</body>
+</html>
+```
+
+**Cambios:**
+- Eliminar `<script type="module" crossorigin src="/modulepreload-polyfill.js"></script>`
+- Eliminar `<script type="module" crossorigin src="/userData.js"></script>`
+- Solo mantener `offscreen.js`
+
+---
+
+## Archivo 3: `src/index.html` — Eliminar preload de userData.js
+
+Modificar para quitar el modulepreload de `userData.js`:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flow Automator - AI Video Generation Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <script type="module" crossorigin src="/main.js"></script>
+  <link rel="modulepreload" crossorigin href="/modulepreload-polyfill.js">
+  <link rel="modulepreload" crossorigin href="/queueDB.js">
+  <link rel="stylesheet" href="/queueDB.css">
+</head>
+<body>
+  <div id="app"></div>
+</body>
+</html>
+```
+
+**Cambio:** Eliminar la línea `<link rel="modulepreload" crossorigin href="/userData.js">`.
+
+> **⚠️ NOTA:** Si `main.js` hace `import ... from './userData.js'` internamente, el archivo `userData.js` **debe seguir existiendo** (con el contenido mock del Paso 1.2). Solo eliminamos el preload para evitar cargar Firebase antes de que sea necesario. Si al quitar el preload se rompe algo, restaurar esta línea.
+
+---
+
+## Archivo 4: `background.js` — Agregar inicialización en cada arranque
+
+El `onInstalled` solo se ejecuta al instalar/actualizar. Para garantizar que el storage **siempre** tenga el estado correcto (incluso si se borró manualmente), agregar una inicialización que corra cada vez que el service worker arranca:
+
+**Agregar al inicio del archivo**, después de las declaraciones de variables:
 
 ```js
-// REEMPLAZAR TODO EL CONTENIDO DE offscreen.js CON:
-chrome.runtime.onMessage.addListener((e, i, s) => {
-  if (e.action === "updateQuota") {
-    s({ success: true, isPaid: true, quotaData: { canContinue: true, isPaid: true, status: "active", remaining: 999999 } });
-    return true;
+// Asegurar auth state en storage en cada arranque del service worker
+chrome.storage.local.get(["authState"], (result) => {
+  if (!result.authState || !result.authState.isLoggedIn) {
+    chrome.storage.local.set({
+      authRequired: false,
+      authState: {
+        isLoggedIn: true,
+        subscriptionStatus: "active",
+        userId: "local-user",
+        lastUpdated: Date.now()
+      },
+      quotaStatus: {
+        isCheckingQuota: false,
+        canContinue: true,
+        isPaid: true,
+        remaining: 999999,
+        status: "active",
+        lastChecked: Date.now()
+      }
+    });
   }
-  if (e.action === "setUserId") {
-    s({ success: true });
-    return true;
-  }
-  s({ success: true });
-  return true;
 });
 ```
 
+Este bloque debe colocarse **justo después de** la línea `let m=!0,l="active",d="local-user",b=null;` y **antes de** `function E()`.
+
 ---
 
-## Archivo 3: `manifest.json`
+## Archivo 5: `manifest.json` — Verificar limpieza (ya aplicada)
 
-### 3.1 — Eliminar permisos innecesarios
+Confirmar que el manifest **NO** contiene:
+- `"identity"` en permissions → ✅ ya removido
+- `"offscreen"` en permissions → ✅ ya removido  
+- Campo `"key"` → ✅ ya removido
+- Campo `"update_url"` → ✅ ya removido
 
-Eliminar `"identity"` y `"offscreen"` del array de permissions:
+**No se requieren cambios adicionales** en manifest.json.
 
-```json
-// ANTES
-"permissions": [ "activeTab", "storage", "sidePanel", "identity", "tabs", "scripting", "downloads", "offscreen" ]
+---
 
-// DESPUÉS
-"permissions": [ "activeTab", "storage", "sidePanel", "tabs", "scripting", "downloads" ]
-```
+## Archivo 6: `offscreen.js` — Verificar stub (ya aplicado)
 
-### 3.2 — Eliminar la key de firma
-
-Eliminar el campo `"key"` del manifest (es la clave pública de la extensión en Chrome Web Store, no es necesaria para uso local):
-
-```json
-// ELIMINAR ESTA LÍNEA:
-"key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApy2ZmS4BzSNQ..."
-```
-
-### 3.3 — Eliminar `update_url`
-
-Eliminar para evitar actualizaciones automáticas que revertirían los cambios:
-
-```json
-// ELIMINAR ESTA LÍNEA:
-"update_url": "https://clients2.google.com/service/update2/crx"
-```
+Confirmar que el contenido actual es el stub. **No se requieren cambios adicionales.**
 
 ---
 
@@ -252,33 +260,72 @@ Eliminar para evitar actualizaciones automáticas que revertirían los cambios:
 
 | Archivo | Razón |
 |---|---|
-| `main.js` | Minificado. Se comunica con background.js vía mensajes; al recibir siempre "autenticado + activo", no mostrará gates de login ni límites de cuota. |
-| `flowContentScript.js` | Minificado. Recibe `authStateChanged` de background.js; siempre recibirá `isLoggedIn: true, subscriptionStatus: "active"`. |
-| `queueDB.js` | Minificado. Maneja la cola de tareas (IndexedDB), no tiene lógica de auth/quota. |
-| `userData.js` | Minificado. Módulo Firebase. Se cargará pero no será invocado para operaciones de auth/quota porque background.js ya no llama al offscreen document. Puede fallar silenciosamente sin afectar la app. |
-| `taskManager.js` | Solo UI de gestión de tareas. No tiene lógica de auth/quota. |
+| `main.js` | Minificado. Recibe auth state de `userData.js` (mock) y de `background.js` (bypass). No necesita cambios. |
+| `flowContentScript.js` | Minificado. Recibe `authStateChanged` de background.js con `isLoggedIn: true`. |
+| `queueDB.js` | Cola de tareas (IndexedDB). Sin lógica auth. |
+| `taskManager.js` | UI del task manager. Sin lógica auth. |
 | `alwaysActive.js` / `alwaysActiveIsolated.js` | Anti-throttling. Sin relación con auth. |
 | `modulepreload-polyfill.js` | Polyfill genérico. Sin relación. |
-| `src/index.html` | Carga main.js. El preload de userData.js es inofensivo. |
-| `src/offscreen.html` | Mantener porque el código residual podría intentar crearlo. Con el offscreen.js stub, no hará nada dañino. |
-| `src/task-manager.html` | Sin relación con auth. |
 
 ---
 
 ## Orden de ejecución
 
-1. **`manifest.json`** — Remover permisos, key, y update_url
-2. **`offscreen.js`** — Reemplazar con stub
-3. **`background.js`** — Aplicar todos los cambios (1.1 a 1.17)
+| # | Archivo | Acción |
+|---|---------|--------|
+| 1 | `userData.js` | Inspeccionar exports originales, anotar nombres |
+| 2 | `userData.js` | Reemplazar con mock (ajustando exports según paso 1) |
+| 3 | `src/offscreen.html` | Eliminar scripts de Firebase/userData |
+| 4 | `src/index.html` | Eliminar preload de userData.js |
+| 5 | `background.js` | Agregar inicialización de auth state en cada arranque |
+| 6 | Verificación | Cargar extensión y probar |
+
+---
 
 ## Verificación post-cambios
 
-Después de aplicar los cambios, verificar que:
+Después de aplicar todos los cambios, el agente debe verificar:
+
 - [ ] La extensión carga sin errores en `chrome://extensions` (modo desarrollador)
+- [ ] No hay errores en la consola del service worker (background.js)
 - [ ] El sidepanel se abre al hacer click en el ícono
-- [ ] No aparece pantalla de login ni botón de "Sign in with Google"
+- [ ] **No aparece pantalla de login ni botón de "Sign in with Google"**
+- [ ] La UI del sidepanel muestra directamente la interfaz funcional
 - [ ] Se pueden agregar prompts y ejecutar la automatización
-- [ ] No hay errores en la consola del service worker relacionados con `chrome.identity` o `chrome.offscreen`
 - [ ] Las descargas de imágenes/videos funcionan correctamente
+- [ ] No hay errores en la consola del sidepanel relacionados con Firebase, auth, o `userData.js`
 - [ ] El Task Manager (`src/task-manager.html`) funciona correctamente
-```
+- [ ] La funcionalidad anti-throttling sigue operativa
+
+---
+
+## Troubleshooting
+
+### Si el login sigue apareciendo después de los cambios:
+
+1. **Inspeccionar `main.js` con DevTools:** En la consola del sidepanel, buscar qué componente renderiza el login. Usar `document.querySelectorAll('[class*=login], [class*=auth], [class*=sign]')` para encontrar elementos.
+
+2. **Inyectar CSS para ocultar:** Como último recurso, crear un archivo `hideLogin.css`:
+   ```css
+   [class*="login"], [class*="auth-gate"], [class*="sign-in"],
+   [data-testid*="login"], [data-testid*="auth"] {
+     display: none !important;
+   }
+   ```
+   Y agregarlo en `src/index.html`: `<link rel="stylesheet" href="/hideLogin.css">`
+
+3. **Verificar storage:** En la consola del sidepanel ejecutar:
+   ```js
+   chrome.storage.local.get(null, (data) => console.log(data));
+   ```
+   Confirmar que `authState.isLoggedIn === true` y `authState.subscriptionStatus === "active"`.
+
+4. **Verificar mensajes:** Si `main.js` envía mensajes de auth al background, monitorear con:
+   ```js
+   // En consola del service worker
+   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+     if (msg.action?.includes('auth') || msg.action?.includes('Auth') || msg.action?.includes('login') || msg.action?.includes('quota')) {
+       console.log('🔍 Auth message intercepted:', msg);
+     }
+   });
+   ```
