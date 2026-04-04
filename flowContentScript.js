@@ -4227,6 +4227,28 @@
 			currentTask
 		};
 	}
+	function getFlowPageState() {
+		const href = window.location.href;
+		const isProjectRoute = href.includes("/project/");
+		const editorReady = Boolean(document.querySelector("[data-slate-editor=\"true\"]"));
+		return {
+			href,
+			isProjectRoute,
+			editorReady,
+			newProjectButtonAvailable: Boolean($("//button[.//i[normalize-space()='add_2']]")),
+			canStartProcessing: isProjectRoute && editorReady
+		};
+	}
+	function sendBridgeHeartbeat(reason) {
+		if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) return;
+		chrome.runtime.sendMessage({
+			action: "flowTabHeartbeat",
+			reason,
+			href: window.location.href,
+			timestamp: Date.now(),
+			sessionId: getContentSessionId?.() || null
+		}).catch(() => {});
+	}
 	installConsoleCapture({ getBaseContext: buildContentLogContext });
 	installGlobalErrorLogging({ getBaseContext: buildContentLogContext });
 	logEvent("content.bootstrap", "Flow content script bootstrap started", {
@@ -4389,18 +4411,23 @@
 				console.warn("⚠️ New project button not found");
 				sendResponse({
 					success: false,
-					error: "Button not found"
+					error: "Button not found",
+					state: getFlowPageState()
 				});
 				return;
 			}
 			console.log("✅ New project button found. Clicking...");
 			button.click();
-			sendResponse({ success: true });
+			sendResponse({
+				success: true,
+				state: getFlowPageState()
+			});
 		} catch (error) {
 			console.error("❌ Error clicking new project button:", error);
 			sendResponse({
 				success: false,
-				error: error.message
+				error: error.message,
+				state: getFlowPageState()
 			});
 		}
 	}
@@ -4585,6 +4612,13 @@
 			});
 			return false;
 		}
+		if (message.action === "getFlowPageState") {
+			sendResponse({
+				...ack,
+				state: getFlowPageState()
+			});
+			return false;
+		}
 		if (message.action === "clickNewProjectButton") {
 			clickNewProjectButton(sendResponse);
 			return true;
@@ -4598,6 +4632,7 @@
 	});
 	document.addEventListener("visibilitychange", () => {
 		if (document.hidden) return;
+		sendBridgeHeartbeat("visibilitychange");
 		setTimeout(() => {
 			verifyAuthenticationState().then((authState) => {
 				chrome.runtime.sendMessage({
@@ -4608,6 +4643,7 @@
 		}, 500);
 	});
 	window.addEventListener("focus", () => {
+		sendBridgeHeartbeat("window-focus");
 		setTimeout(() => {
 			verifyAuthenticationState().then((authState) => {
 				chrome.runtime.sendMessage({
@@ -4627,5 +4663,6 @@
 	console.log("✅ Flow Automation bootstrap complete — all modules wired");
 	console.log("📦 Layers: core | interactions (+ imageUploader) | workflow | ui (+ contentDownloadManager)");
 	logEvent("content.bootstrap_complete", "Flow automation bootstrap complete", { href: window.location.href });
+	sendBridgeHeartbeat("bootstrap-complete");
 	//#endregion
 })();
