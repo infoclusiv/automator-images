@@ -8,11 +8,35 @@ const DEFAULT_FILTERS = {
 const SHELL_ID = "flow-debug-logs-shell";
 const STYLE_ID = "flow-debug-logs-style";
 const AUTO_OPEN_HASH = "#logs";
+const AUTO_CLEAR_COMPLETED_SHELL_ID = "flow-auto-clear-completed-shell";
 
 let isPanelOpen = false;
 let panelElements = null;
 let activeFilters = { ...DEFAULT_FILTERS };
 let refreshTimer = null;
+let autoClearElements = null;
+
+function isTaskManagerPage() {
+  return /(?:^|\/)task-manager\.html$/i.test(window.location.pathname);
+}
+
+async function getAutoClearCompletedTasksSetting() {
+  const response = await sendMessage("getAutoClearCompletedTasksSetting");
+  if (!response?.success) {
+    throw new Error(response?.error || "Failed to load auto-clear setting");
+  }
+
+  return response.enabled === true;
+}
+
+async function setAutoClearCompletedTasksSetting(enabled) {
+  const response = await sendMessage("setAutoClearCompletedTasksSetting", { enabled });
+  if (!response?.success) {
+    throw new Error(response?.error || "Failed to save auto-clear setting");
+  }
+
+  return response.enabled === true;
+}
 
 function sendMessage(action, payload = {}) {
   return new Promise((resolve, reject) => {
@@ -94,6 +118,113 @@ function ensureStyles() {
       position: relative;
       z-index: 2147483000;
       font-family: "Segoe UI", "Google Sans", sans-serif;
+    }
+
+    #${AUTO_CLEAR_COMPLETED_SHELL_ID} {
+      position: fixed;
+      top: 18px;
+      right: 150px;
+      z-index: 2147482990;
+      font-family: "Segoe UI", "Google Sans", sans-serif;
+    }
+
+    .flow-auto-clear-completed__panel {
+      min-width: 280px;
+      max-width: min(42vw, 360px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 18px 34px rgba(15, 23, 42, 0.14);
+    }
+
+    .flow-auto-clear-completed__content {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .flow-auto-clear-completed__title {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.2;
+      color: #0f172a;
+    }
+
+    .flow-auto-clear-completed__description {
+      margin-top: 4px;
+      font-size: 11px;
+      line-height: 1.35;
+      color: #64748b;
+    }
+
+    .flow-auto-clear-completed__note {
+      margin-top: 4px;
+      min-height: 15px;
+      font-size: 10px;
+      line-height: 1.3;
+      color: #0f766e;
+    }
+
+    .flow-auto-clear-completed__note.is-error {
+      color: #b91c1c;
+    }
+
+    .flow-auto-clear-completed__switch {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 52px;
+      height: 30px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .flow-auto-clear-completed__switch input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      margin: 0;
+    }
+
+    .flow-auto-clear-completed__track {
+      width: 52px;
+      height: 30px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+      transition: background 0.18s ease, opacity 0.18s ease;
+    }
+
+    .flow-auto-clear-completed__thumb {
+      position: absolute;
+      left: 4px;
+      top: 4px;
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      background: #ffffff;
+      box-shadow: 0 6px 12px rgba(15, 23, 42, 0.18);
+      transition: transform 0.18s ease;
+    }
+
+    .flow-auto-clear-completed__switch input:checked + .flow-auto-clear-completed__track {
+      background: linear-gradient(135deg, #10b981, #06b6d4);
+    }
+
+    .flow-auto-clear-completed__switch input:checked ~ .flow-auto-clear-completed__thumb {
+      transform: translateX(22px);
+    }
+
+    .flow-auto-clear-completed__switch input:disabled + .flow-auto-clear-completed__track,
+    .flow-auto-clear-completed__switch input:disabled ~ .flow-auto-clear-completed__thumb {
+      opacity: 0.6;
     }
 
     .flow-debug-logs__button {
@@ -511,6 +642,17 @@ function ensureStyles() {
     }
 
     @media (max-width: 640px) {
+      #${AUTO_CLEAR_COMPLETED_SHELL_ID} {
+        top: 72px;
+        right: 12px;
+        left: 12px;
+      }
+
+      .flow-auto-clear-completed__panel {
+        min-width: 0;
+        max-width: none;
+      }
+
       .flow-debug-logs__button {
         right: 12px;
         bottom: 76px;
@@ -554,6 +696,28 @@ function ensureStyles() {
         background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
         border-left-color: rgba(71, 85, 105, 0.55);
         color: #e2e8f0;
+      }
+
+      .flow-auto-clear-completed__panel {
+        background: rgba(15, 23, 42, 0.92);
+        border-color: rgba(71, 85, 105, 0.72);
+        box-shadow: 0 16px 28px rgba(2, 6, 23, 0.3);
+      }
+
+      .flow-auto-clear-completed__title {
+        color: #f8fafc;
+      }
+
+      .flow-auto-clear-completed__description {
+        color: #94a3b8;
+      }
+
+      .flow-auto-clear-completed__note {
+        color: #5eead4;
+      }
+
+      .flow-auto-clear-completed__note.is-error {
+        color: #fca5a5;
       }
 
       .flow-debug-logs__header {
@@ -854,6 +1018,115 @@ function onEscapeKey(event) {
   }
 }
 
+function renderAutoClearCompletedState({ enabled, note = "", isError = false }) {
+  if (!autoClearElements) {
+    return;
+  }
+
+  autoClearElements.toggle.checked = enabled === true;
+  autoClearElements.note.textContent = note;
+  autoClearElements.note.classList.toggle("is-error", isError);
+}
+
+function setAutoClearCompletedPending(isPending) {
+  if (!autoClearElements) {
+    return;
+  }
+
+  autoClearElements.toggle.disabled = isPending;
+  autoClearElements.panel.dataset.pending = isPending ? "true" : "false";
+}
+
+async function refreshAutoClearCompletedUi() {
+  if (!autoClearElements) {
+    return;
+  }
+
+  try {
+    const enabled = await getAutoClearCompletedTasksSetting();
+    renderAutoClearCompletedState({
+      enabled,
+      note: enabled ? "Se borran solo las tareas processed al terminar el flujo." : "Conserva la cola completa hasta que la limpies manualmente.",
+    });
+  } catch (error) {
+    renderAutoClearCompletedState({
+      enabled: autoClearElements.toggle.checked,
+      note: error.message || "No se pudo cargar el ajuste.",
+      isError: true,
+    });
+  }
+}
+
+function createAutoClearCompletedUi() {
+  if (!isTaskManagerPage() || document.getElementById(AUTO_CLEAR_COMPLETED_SHELL_ID)) {
+    return;
+  }
+
+  const container = document.createElement("div");
+  container.id = AUTO_CLEAR_COMPLETED_SHELL_ID;
+  container.innerHTML = `
+    <div class="flow-auto-clear-completed__panel">
+      <div class="flow-auto-clear-completed__content">
+        <div class="flow-auto-clear-completed__title">Auto-clear completed tasks</div>
+        <div class="flow-auto-clear-completed__description">Limpia automaticamente las tareas processed cuando Flow termina el lote actual.</div>
+        <div class="flow-auto-clear-completed__note"></div>
+      </div>
+      <label class="flow-auto-clear-completed__switch" aria-label="Toggle auto-clear completed tasks">
+        <input id="flow-auto-clear-completed-toggle" type="checkbox" />
+        <span class="flow-auto-clear-completed__track"></span>
+        <span class="flow-auto-clear-completed__thumb"></span>
+      </label>
+    </div>
+  `;
+
+  document.body.appendChild(container);
+
+  autoClearElements = {
+    panel: container.querySelector(".flow-auto-clear-completed__panel"),
+    toggle: container.querySelector("#flow-auto-clear-completed-toggle"),
+    note: container.querySelector(".flow-auto-clear-completed__note"),
+  };
+
+  autoClearElements.toggle.addEventListener("change", async () => {
+    const nextEnabled = autoClearElements.toggle.checked;
+    setAutoClearCompletedPending(true);
+
+    try {
+      const savedEnabled = await setAutoClearCompletedTasksSetting(nextEnabled);
+      renderAutoClearCompletedState({
+        enabled: savedEnabled,
+        note: savedEnabled
+          ? "Activo. Solo las tareas processed se eliminaran al finalizar el flujo."
+          : "Desactivado. La cola no se limpiara automaticamente.",
+      });
+    } catch (error) {
+      autoClearElements.toggle.checked = !nextEnabled;
+      renderAutoClearCompletedState({
+        enabled: !nextEnabled,
+        note: error.message || "No se pudo guardar el ajuste.",
+        isError: true,
+      });
+    } finally {
+      setAutoClearCompletedPending(false);
+    }
+  });
+
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local" || !changes.autoClearCompletedTasks) {
+      return;
+    }
+
+    renderAutoClearCompletedState({
+      enabled: changes.autoClearCompletedTasks.newValue === true,
+      note: changes.autoClearCompletedTasks.newValue === true
+        ? "Activo. Solo las tareas processed se eliminaran al finalizar el flujo."
+        : "Desactivado. La cola no se limpiara automaticamente.",
+    });
+  });
+
+  void refreshAutoClearCompletedUi();
+}
+
 function createUi() {
   if (document.getElementById(SHELL_ID)) {
     return;
@@ -971,6 +1244,7 @@ function createUi() {
 
 async function init() {
   createUi();
+  createAutoClearCompletedUi();
   await refreshBadgeOnly();
 
   if (window.location.hash === AUTO_OPEN_HASH) {
