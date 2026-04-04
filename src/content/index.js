@@ -1,0 +1,377 @@
+import { FLOW_PAGE_ZOOM_FACTOR, SELECTORS } from "./constants.js";
+import { $ } from "./domUtils.js";
+import { EVENTS } from "./eventBus.js";
+import * as eventBus from "./eventBus.js";
+import * as state from "./stateManager.js";
+import * as textInjector from "./textInjector.js";
+import * as submitHandler from "./submitHandler.js";
+import * as settingsApplicator from "./settingsApplicator.js";
+import * as imageUploader from "./imageUploader.js";
+import * as monitoring from "./monitoring.js";
+import * as taskRunner from "./taskRunner.js";
+import * as queueController from "./queueController.js";
+import * as overlayManager from "./overlayManager.js";
+import * as contentDownloadManager from "./contentDownloadManager.js";
+
+textInjector.init(state.getState);
+submitHandler.init(state.getState);
+settingsApplicator.init(state.getState, state.setState);
+imageUploader.init(state.getState);
+
+monitoring.init({
+  getState: state.getState,
+  setState: state.setState,
+  getSelectors: () => SELECTORS,
+  eventBus,
+  stateManager: state,
+});
+
+taskRunner.init({
+  getState: state.getState,
+  setState: state.setState,
+  eventBus,
+  monitoring,
+  stateManager: state,
+});
+
+queueController.init({
+  stateManager: state,
+  eventBus,
+  monitoring,
+});
+
+overlayManager.init(state, eventBus);
+state.init(eventBus, contentDownloadManager);
+
+function buildUnifiedQueueTasks(queueTasks) {
+  return queueTasks.map((task) => ({
+    queueTaskId: task.id,
+    index: task.index,
+    prompt: task.prompt,
+    type: task.type,
+    status: "pending",
+    expectedVideos: parseInt(task.settings?.count, 10) || 1,
+    foundVideos: 0,
+    videoUrls: [],
+    settings: task.settings,
+    referenceImages: task.referenceImages || null,
+  }));
+}
+
+function buildLegacyTasks(message, nextSettings) {
+  const prompts = message.prompts || [];
+  const taskSettings = message.taskSettings || [];
+  const processingMode = message.processingMode || "createvideo";
+  const imagePairs = message.imagePairs || [];
+
+  if (processingMode === "image" && imagePairs.length > 0) {
+    return imagePairs.map((pair, index) => ({
+      index: index + 1,
+      prompt: pair.prompt,
+      image: pair.image,
+      type: "image-to-video",
+      status: "pending",
+      expectedVideos: parseInt(pair.settings?.count, 10) || 1,
+      foundVideos: 0,
+      videoUrls: [],
+      settings: pair.settings,
+    }));
+  }
+
+  return prompts.map((prompt, index) => {
+    const taskSetting = taskSettings[index] || {
+      count: nextSettings.flowVideoCount,
+      model: nextSettings.flowModel,
+      aspectRatio: nextSettings.flowAspectRatio,
+    };
+
+    return {
+      index: index + 1,
+      prompt,
+      type: "createvideo",
+      status: "pending",
+      expectedVideos: parseInt(taskSetting.count || taskSetting.videoCount, 10) || 1,
+      foundVideos: 0,
+      videoUrls: [],
+      settings: taskSetting,
+    };
+  });
+}
+
+async function restorePausedState(sendResponse, ack) {
+  const storedState = await state.loadStateFromStorage();
+  if (!storedState || storedState.status !== "paused") {
+    sendResponse({ ...ack, error: "No paused state to resume" });
+    return;
+  }
+
+  state.setState({
+    prompts: storedState.prompts || [],
+    currentPromptIndex: storedState.currentIndex || 0,
+    settings: storedState.settings || state.getSettings(),
+    taskList: storedState.taskList || [],
+    currentTaskIndex: storedState.currentTaskIndex || 0,
+    isProcessing: true,
+  });
+  state.setState({ isPausing: false });
+
+  chrome.runtime.sendMessage({ action: "setPageZoom", zoomFactor: FLOW_PAGE_ZOOM_FACTOR }).catch(() => {});
+
+  console.log(
+    `▶️ Resuming Flow from prompt ${state.getState().currentPromptIndex + 1}/${state.getState().prompts.length}`,
+  );
+  console.log(`📋 Restored ${state.getState().taskList.length} tasks`);
+
+  state.saveStateToStorage();
+  state.getState().taskList.forEach((task) => state.sendTaskUpdate(task));
+  eventBus.emit(EVENTS.QUEUE_NEXT);
+  sendResponse({ ...ack, resumed: true });
+}
+
+async function restoreAfterCacheClean(sendResponse, ack) {
+  const storedState = await state.loadStateFromStorage();
+  if (!storedState || !["running", "paused"].includes(storedState.status) || !storedState.prompts?.length) {
+    console.warn("⚠️ resumeAfterCacheClean: no valid saved state found — cannot auto-resume");
+    sendResponse({ ...ack, error: "No valid saved state" });
+    return;
+  }
+
+  state.setState({
+    prompts: storedState.prompts || [],
+    currentPromptIndex: storedState.currentIndex || 0,
+    settings: storedState.settings || state.getSettings(),
+    taskList: storedState.taskList || [],
+    currentTaskIndex: storedState.currentTaskIndex || 0,
+    isProcessing: true,
+    isPausing: false,
+    lastAppliedSettings: null,
+    lastAppliedMode: null,
+  });
+
+  chrome.runtime.sendMessage({ action: "setPageZoom", zoomFactor: FLOW_PAGE_ZOOM_FACTOR }).catch(() => {});
+  state.saveStateToStorage();
+  state.getState().taskList.forEach((task) => state.sendTaskUpdate(task));
+
+  console.log(
+    `🔄 resumeAfterCacheClean: restored ${state.getState().taskList.length} tasks, resuming from index ${state.getState().currentPromptIndex}`,
+  );
+
+  eventBus.emit(EVENTS.QUEUE_NEXT);
+  sendResponse({ ...ack, resumed: true });
+}
+
+function clickNewProjectButton(sendResponse) {
+  try {
+    const button = $("//button[.//i[normalize-space()='add_2']]");
+    if (!button) {
+      console.warn("⚠️ New project button not found");
+      sendResponse({ success: false, error: "Button not found" });
+      return;
+    }
+
+    console.log("✅ New project button found. Clicking...");
+    button.click();
+    sendResponse({ success: true });
+  } catch (error) {
+    console.error("❌ Error clicking new project button:", error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  const ack = { received: true };
+
+  if (message.action === "startProcessing") {
+    state
+      .verifyAuthenticationState()
+      .then((authState) => {
+        if (!authState.isLoggedIn) {
+          const error = authState.error || "Authentication required. Please sign in first.";
+          chrome.runtime.sendMessage({ action: "error", error });
+          sendResponse({ ...ack, error });
+          return;
+        }
+
+        if (state.getState().isProcessing) {
+          sendResponse({ ...ack, error: "Already processing" });
+          return;
+        }
+
+        const incomingSettings = message.settings || {};
+        const currentSettings = state.getSettings();
+        const nextSettings = {
+          ...currentSettings,
+          ...incomingSettings,
+          flowVideoCount: incomingSettings.flowVideoCount || currentSettings.flowVideoCount,
+          flowModel: incomingSettings.flowModel || currentSettings.flowModel,
+          flowAspectRatio:
+            incomingSettings.flowAspectRatio || currentSettings.flowAspectRatio,
+        };
+
+        state.setState({
+          settings: nextSettings,
+          isProcessing: true,
+          currentPromptIndex: 0,
+          currentTaskIndex: 0,
+          lastAppliedSettings: null,
+          lastAppliedMode: null,
+          fallbackModel: null,
+        });
+
+        let taskList;
+        let prompts;
+
+        if (message.useUnifiedQueue && Array.isArray(message.queueTasks) && message.queueTasks.length > 0) {
+          console.log("🎯 Using UNIFIED QUEUE system");
+          taskList = buildUnifiedQueueTasks(message.queueTasks);
+          prompts = taskList.map((task) => task.prompt);
+          console.log(
+            `✅ Created ${taskList.length} tasks from unified queue (${taskList.filter((task) => task.type === "createvideo").length} video, ${taskList.filter((task) => task.type === "createimage").length} image)`,
+          );
+        } else {
+          console.log("⚠️ Using LEGACY task system");
+          taskList = buildLegacyTasks(message, nextSettings);
+          prompts = taskList.map((task) => task.prompt);
+          console.log(`✅ Created ${taskList.length} tasks from legacy flow`);
+        }
+
+        state.setState({ taskList, prompts });
+        state.saveStateToStorage();
+        eventBus.emit(EVENTS.QUEUE_NEXT);
+        sendResponse({ ...ack, started: true });
+      })
+      .catch((error) => {
+        const messageText = error?.message || "Could not start processing. Please try again.";
+        chrome.runtime.sendMessage({ action: "error", error: messageText });
+        sendResponse({ ...ack, error: messageText });
+      });
+
+    return true;
+  }
+
+  if (message.action === "resumeProcessing") {
+    restorePausedState(sendResponse, ack);
+    return true;
+  }
+
+  if (message.action === "resumeAfterCacheClean") {
+    restoreAfterCacheClean(sendResponse, ack);
+    return true;
+  }
+
+  if (message.action === "stopProcessing") {
+    eventBus.emit(EVENTS.PROCESSING_STOP);
+    state.clearCountdownTimer();
+    state.setState({ isProcessing: false, isPausing: true });
+    chrome.runtime.sendMessage({ action: "resetPageZoom" }).catch(() => {});
+    state.saveStateToStorage();
+
+    if (state.getState().isCurrentPromptProcessed) {
+      state.setState({ isPausing: false });
+      eventBus.emit(EVENTS.OVERLAY_HIDE);
+      chrome.runtime.sendMessage({
+        action: "updateStatus",
+        status: "Processing paused. Click Resume to continue.",
+      });
+    } else {
+      eventBus.emit(EVENTS.OVERLAY_PAUSING);
+      chrome.runtime.sendMessage({
+        action: "updateStatus",
+        status: "Flow will pause after current prompt completes...",
+      });
+    }
+
+    sendResponse(ack);
+    return false;
+  }
+
+  if (message.action === "terminateProcessing") {
+    chrome.runtime.sendMessage({ action: "resetPageZoom" }).catch(() => {});
+    state.setState({
+      isProcessing: false,
+      isPausing: false,
+      prompts: [],
+      currentPromptIndex: 0,
+      taskList: [],
+      currentTaskIndex: 0,
+      lastAppliedSettings: null,
+      lastAppliedMode: null,
+      fallbackModel: null,
+    });
+    state.clearStateFromStorage();
+    eventBus.emit(EVENTS.PROCESSING_TERMINATE);
+    eventBus.emit(EVENTS.OVERLAY_HIDE);
+    sendResponse({ ...ack, terminated: true });
+    return false;
+  }
+
+  if (message.action === "getStoredState") {
+    state.loadStateFromStorage().then((storedState) => {
+      sendResponse({ ...ack, state: storedState });
+    });
+    return true;
+  }
+
+  if (message.action === "authStateChanged") {
+    state.setState({
+      isUserLoggedIn: message.isLoggedIn,
+      subscriptionStatus: message.subscriptionStatus,
+      userId: message.userId,
+    });
+    sendResponse({ success: true });
+    return false;
+  }
+
+  if (message.action === "activateContentDownloader") {
+    contentDownloadManager.toggle();
+    sendResponse({ ...ack, toggled: true });
+    return false;
+  }
+
+  if (message.action === "clickNewProjectButton") {
+    clickNewProjectButton(sendResponse);
+    return true;
+  }
+
+  if (message.action === "pingFlowContent") {
+    sendResponse({ pong: true });
+    return false;
+  }
+
+  sendResponse(ack);
+  return false;
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    return;
+  }
+
+  setTimeout(() => {
+    state.verifyAuthenticationState().then((authState) => {
+      chrome.runtime.sendMessage({ action: "authStateRefreshed", authState }).catch(() => {});
+    });
+  }, 500);
+});
+
+window.addEventListener("focus", () => {
+  setTimeout(() => {
+    state.verifyAuthenticationState().then((authState) => {
+      chrome.runtime.sendMessage({ action: "authStateRefreshed", authState }).catch(() => {});
+    });
+  }, 500);
+});
+
+chrome.runtime.sendMessage({ action: "getAuthState" }, (response) => {
+  if (!response) {
+    return;
+  }
+
+  state.setState({
+    isUserLoggedIn: response.isLoggedIn,
+    subscriptionStatus: response.subscriptionStatus,
+  });
+});
+
+console.log("✅ Flow Automation bootstrap complete — all modules wired");
+console.log("📦 Layers: core | interactions (+ imageUploader) | workflow | ui (+ contentDownloadManager)");

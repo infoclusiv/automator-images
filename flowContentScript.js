@@ -1,91 +1,2370 @@
-const p={QUEUE_NEXT:"queue:next",PROCESSING_COMPLETE:"processing:complete",PROCESSING_STOP:"processing:stop",PROCESSING_TERMINATE:"processing:terminate",TASK_START:"task:start",TASK_COMPLETED:"task:completed",TASK_ERROR:"task:error",TASK_SKIPPED:"task:skipped",DAILY_LIMIT_FALLBACK:"task:daily_limit_fallback",OVERLAY_SHOW:"overlay:show",OVERLAY_HIDE:"overlay:hide",OVERLAY_MESSAGE:"overlay:message",OVERLAY_PAUSING:"overlay:pausing",OVERLAY_ERROR_BANNER:"overlay:error_banner",OVERLAY_ERROR_BANNER_CLEAR:"overlay:error_banner_clear",COUNTDOWN_START:"countdown:start",PROGRESS_UPDATE:"progress:update"},W=new Map;function vt(e,t){return W.has(e)||W.set(e,new Set),W.get(e).add(t),()=>lt(e,t)}function pn(e,t){const n=o=>{lt(e,n),t(o)};vt(e,n)}function lt(e,t){const n=W.get(e);n&&(n.delete(t),n.size===0&&W.delete(e))}function mn(e,t){const n=W.get(e);if(!(!n||n.size===0))for(const o of n)try{o(t)}catch(r){console.error(`❌ EventBus: handler error for event "${e}":`,r)}}function gn(e){W.delete(e)}function fn(){W.clear()}function bn(){const e={};for(const[t,n]of W.entries())e[t]=n.size;return e}console.log("✅ EventBus module loaded");const _e=Object.freeze(Object.defineProperty({__proto__:null,EVENTS:p,clear:gn,clearAll:fn,debugListeners:bn,emit:mn,off:lt,on:vt,once:pn},Symbol.toStringTag,{value:"Module"}));function h(e){return new Promise(t=>setTimeout(t,e))}function $(e,t=document){try{return document.evaluate(e,t,null,XPathResult.FIRST_ORDERED_NODE_TYPE,null).singleNodeValue}catch(n){return console.error("❌ XPath evaluation error:",n,`
-XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n<t;){const o=document.querySelector(e);if(o)return o;await h(100)}return null}function re(){document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",keyCode:27,bubbles:!0,cancelable:!0,composed:!0}))}function Tt(e){const t=e.getBoundingClientRect();return{x:t.left+t.width/2,y:t.top+t.height/2}}console.log("✅ DomUtils module loaded");let k=null,tt=null;function It(e,t=null){k=e,tt=t,console.log("✅ StateManager EventBus wired")}let Oe=!1,De=null,ct=null,H=!1,ae=!1,q=0,V=[],T={autoDownload:!0,delayBetweenPrompts:8e3,delayMin:15,delayMax:30,flowVideoCount:"1",flowModel:"default",flowAspectRatio:"landscape",imageDownloadQuality:"1K",videoDownloadQuality:"720p"},dt=!1,ve=null,ke=null,ut=null,S=[],J=0,Pt=null,Ct=5e3,At=null,Mt=null,ge=null,Lt=3,Rt=0,_t=new Set;const Pe="flowAutomationState",Ot={PROMPT_POLICY_ERROR_POPUP_XPATH:"//li[@data-sonner-toast and .//i[normalize-space(text())='error'] and not(.//*[contains(., '5')])]",QUEUE_FULL_POPUP_XPATH:"//li[@data-sonner-toast and .//i[normalize-space(text())='error'] and .//*[contains(., '5')]]"};function ue(){return{isUserLoggedIn:Oe,subscriptionStatus:De,userId:ct,isProcessing:H,isPausing:ae,currentPromptIndex:q,prompts:V,settings:T,isCurrentPromptProcessed:dt,lastAppliedSettings:ve,lastAppliedMode:ke,fallbackModel:ut,taskList:S,currentTaskIndex:J,tileScanInterval:Pt,scanIntervalMs:Ct,currentProcessingPrompt:At,currentTaskStartTime:Mt,countdownInterval:ge,maxRetries:Lt,currentRetries:Rt,preSubmitTileIds:_t}}function ee(e){if(e.isUserLoggedIn!==void 0&&(Oe=e.isUserLoggedIn),e.subscriptionStatus!==void 0&&(De=e.subscriptionStatus),e.userId!==void 0&&(ct=e.userId),e.isProcessing!==void 0){const t=H;H=e.isProcessing,t!==H&&chrome.runtime.sendMessage({action:"automationStateChanged",isRunning:H}).catch(()=>{})}e.isPausing!==void 0&&(ae=e.isPausing),e.currentPromptIndex!==void 0&&(q=e.currentPromptIndex),e.prompts!==void 0&&(V=e.prompts),e.settings!==void 0&&(T=e.settings),e.isCurrentPromptProcessed!==void 0&&(dt=e.isCurrentPromptProcessed),e.lastAppliedSettings!==void 0&&(ve=e.lastAppliedSettings),e.lastAppliedMode!==void 0&&(ke=e.lastAppliedMode),e.fallbackModel!==void 0&&(ut=e.fallbackModel),e.taskList!==void 0&&(S=e.taskList),e.currentTaskIndex!==void 0&&(J=e.currentTaskIndex),e.tileScanInterval!==void 0&&(Pt=e.tileScanInterval),e.scanIntervalMs!==void 0&&(Ct=e.scanIntervalMs),e.currentProcessingPrompt!==void 0&&(At=e.currentProcessingPrompt),e.currentTaskStartTime!==void 0&&(Mt=e.currentTaskStartTime),e.countdownInterval!==void 0&&(ge=e.countdownInterval),e.maxRetries!==void 0&&(Lt=e.maxRetries),e.currentRetries!==void 0&&(Rt=e.currentRetries),e.preSubmitTileIds!==void 0&&(_t=e.preSubmitTileIds)}function hn(){return T}function yn(e){T={...T,...e}}function wn(){return S}function xn(e,t){S[e]&&(S[e]={...S[e],...t})}function En(){return S[q]||null}function Sn(e){return S.find(t=>t.index===e)||null}function vn(){return S.find(e=>e.status==="current")||null}async function Ee(){const e={status:H?"running":"paused",isProcessing:H,prompts:V.map(t=>t),currentIndex:q,totalPrompts:V.length,processedCount:q,currentPrompt:V[q]||"",settings:T,startTime:Date.now(),lastUpdate:Date.now(),taskList:S,currentTaskIndex:J};return new Promise(t=>{chrome.storage.local.set({[Pe]:e},()=>{t(e)})})}async function Te(){return new Promise(e=>{chrome.storage.local.get(Pe,t=>{const n=t[Pe];e(n||null)})})}async function Dt(){return new Promise(e=>{chrome.storage.local.remove(Pe,()=>{e()})})}(async function(){const t=await Te();t&&t.status==="paused"&&(V=t.prompts||[],q=t.currentIndex||0,T=t.settings||T,S=t.taskList||[],J=t.currentTaskIndex||0,H=!1,console.log(`📋 Restored ${S.length} tasks from storage`),chrome.runtime.sendMessage({action:"stateRestored",state:t}).catch(()=>{}),S.length>0&&S.forEach(n=>Ke(n)))})();function qe(e,t,n){return e&&e.settings&&e.settings[t]!==void 0?e.settings[t]:n[t]}function kn(e,t){let n=qe(e,"delayMin",t),o=qe(e,"delayMax",t);if(n===void 0||o===void 0){const a=qe(e,"delayBetweenPrompts",t)||8;n=a/1e3,o=a/1e3}n>o&&([n,o]=[o,n]);const r=n+Math.random()*(o-n);return Math.round(r*1e3)}function Ge(){ge&&(clearInterval(ge),ge=null)}function Tn(e){const t=Math.floor(e/1e3),n=Math.floor(t/60),o=t%60;return n>0?`${n}m ${o}s`:`${o}s`}function In(e,t){Ge();let n=e;const o=Date.now(),r=(e/1e3).toFixed(1);k&&k.emit(p.OVERLAY_MESSAGE,`⏱️ Waiting ${r}s before ${t}...`),ge=setInterval(()=>{const i=Date.now()-o;if(n=e-i,n<=0){Ge(),k&&k.emit(p.OVERLAY_MESSAGE,`▶️ Starting ${t}...`);return}const a=(n/1e3).toFixed(1);k&&k.emit(p.OVERLAY_MESSAGE,`⏱️ Waiting ${a}s before ${t}...`)},100)}function Ze(){return new Promise(e=>{let t=0;const n=3,o=1e3;function r(){chrome.runtime.sendMessage({action:"getAuthState"},i=>{if(chrome.runtime.lastError){if(t<n){t++,setTimeout(r,o);return}e({isLoggedIn:!1,subscriptionStatus:null,error:"Could not verify authentication state"});return}i?(Oe=i.isLoggedIn,De=i.subscriptionStatus,e(i)):t<n?(t++,setTimeout(r,o)):e({isLoggedIn:!1,subscriptionStatus:null,error:"No response from background script"})})}r()})}chrome.runtime.sendMessage({action:"getAuthState"},e=>{e&&(Oe=e.isLoggedIn,De=e.subscriptionStatus)});chrome.runtime.onMessage.addListener(function(e,t,n){const o={received:!0};if(e.action==="startProcessing")return Ze().then(r=>{if(!r.isLoggedIn){const i=r.error||"Authentication required. Please sign in first.";chrome.runtime.sendMessage({action:"error",error:i}),n({...o,error:i});return}if(H)n({...o,error:"Already processing"});else{const i=e.settings||{};if(T={...T,...i,flowVideoCount:i.flowVideoCount||T.flowVideoCount,flowModel:i.flowModel||T.flowModel,flowAspectRatio:i.flowAspectRatio||T.flowAspectRatio},ee({isProcessing:!0}),q=0,ve=null,ke=null,e.useUnifiedQueue&&Array.isArray(e.queueTasks)&&e.queueTasks.length>0)console.log("🎯 Using UNIFIED QUEUE system"),S=e.queueTasks.map(i=>{var a;return{queueTaskId:i.id,index:i.index,prompt:i.prompt,type:i.type,status:"pending",expectedVideos:parseInt((a=i.settings)==null?void 0:a.count,10)||1,foundVideos:0,videoUrls:[],settings:i.settings,referenceImages:i.referenceImages||null}}),V=S.map(i=>i.prompt),console.log(`✅ Created ${S.length} tasks from unified queue (${S.filter(i=>i.type==="createvideo").length} video, ${S.filter(i=>i.type==="createimage").length} image)`);else{console.log("⚠️ Using LEGACY task system"),V=e.prompts||[];const i=e.taskSettings||[],a=e.processingMode||"createvideo",l=e.imagePairs||[];a==="image"&&l.length>0?(S=l.map((d,u)=>{var c;return{index:u+1,prompt:d.prompt,image:d.image,type:"image-to-video",status:"pending",expectedVideos:parseInt((c=d.settings)==null?void 0:c.count,10)||1,foundVideos:0,videoUrls:[],settings:d.settings}}),console.log(`✅ Created ${S.length} image-to-video tasks (legacy)`)):(S=V.map((d,u)=>{const c=i[u]||{videoCount:T.flowVideoCount,model:T.flowModel,aspectRatio:T.flowAspectRatio};return{index:u+1,prompt:d,type:"createvideo",status:"pending",expectedVideos:parseInt(c.count,10)||1,foundVideos:0,videoUrls:[],settings:c}}),console.log(`✅ Created ${S.length} createvideo tasks (legacy)`))}J=0,Ee(),k&&k.emit(p.QUEUE_NEXT),n({...o,started:!0})}}).catch(r=>{const i=(r==null?void 0:r.message)||"Could not start processing. Please try again.";chrome.runtime.sendMessage({action:"error",error:i}),n({...o,error:i})}),!0;if(e.action==="resumeProcessing")return Te().then(r=>{r&&r.status==="paused"?(V=r.prompts||[],q=r.currentIndex||0,T=r.settings||T,S=r.taskList||[],J=r.currentTaskIndex||0,ee({isProcessing:!0}),ae=!1,chrome.runtime.sendMessage({action:"setPageZoom",zoomFactor:.75}).catch(()=>{}),console.log(`▶️ Resuming Flow from prompt ${q+1}/${V.length}`),console.log(`📋 Restored ${S.length} tasks`),Ee(),S.forEach(i=>Ke(i)),k&&k.emit(p.QUEUE_NEXT),n({...o,resumed:!0})):n({...o,error:"No paused state to resume"})}),!0;if(e.action==="resumeAfterCacheClean")return Te().then(r=>{var i;r&&(r.status==="running"||r.status==="paused")&&((i=r.prompts)==null?void 0:i.length)>0?(V=r.prompts||[],q=r.currentIndex||0,T=r.settings||T,S=r.taskList||[],J=r.currentTaskIndex||0,H=!0,ae=!1,ve=null,ke=null,chrome.runtime.sendMessage({action:"setPageZoom",zoomFactor:.75}).catch(()=>{}),Ee(),S.forEach(a=>Ke(a)),console.log(`🔄 resumeAfterCacheClean: restored ${S.length} tasks, resuming from index ${q}`),k&&k.emit(p.QUEUE_NEXT),n({...o,resumed:!0})):(console.warn("⚠️ resumeAfterCacheClean: no valid saved state found — cannot auto-resume"),n({...o,error:"No valid saved state"}))}),!0;if(e.action==="stopProcessing")k&&k.emit(p.PROCESSING_STOP),Ge(),ee({isProcessing:!1}),ae=!0,chrome.runtime.sendMessage({action:"resetPageZoom"}).catch(()=>{}),Ee(),dt?(ae=!1,k&&k.emit(p.OVERLAY_HIDE),chrome.runtime.sendMessage({action:"updateStatus",status:"Processing paused. Click Resume to continue."})):(k&&k.emit(p.OVERLAY_PAUSING),chrome.runtime.sendMessage({action:"updateStatus",status:"Flow will pause after current prompt completes..."})),n(o);else if(e.action==="terminateProcessing")chrome.runtime.sendMessage({action:"resetPageZoom"}).catch(()=>{}),ee({isProcessing:!1}),ae=!1,V=[],q=0,S=[],J=0,ve=null,ke=null,ut=null,Dt(),k&&(k.emit(p.PROCESSING_TERMINATE),k.emit(p.OVERLAY_HIDE)),n({...o,terminated:!0});else{if(e.action==="getStoredState")return Te().then(r=>{n({...o,state:r})}),!0;if(e.action==="authStateChanged")Oe=e.isLoggedIn,De=e.subscriptionStatus,ct=e.userId,n({success:!0});else if(e.action==="activateContentDownloader")tt?(tt.toggle(),n({received:!0,toggled:!0})):(console.warn("⚠️ activateContentDownloader: ContentDownloadManager not wired"),n({received:!0,toggled:!1,error:"ContentDownloadManager not available"}));else if(e.action==="clickNewProjectButton"){try{const r=$("//button[.//i[normalize-space()='add_2']]");r?(console.log("✅ New project button found. Clicking..."),r.click(),n({success:!0})):(console.warn("⚠️ New project button not found"),n({success:!1,error:"Button not found"}))}catch(r){console.error("❌ Error clicking new project button:",r),n({success:!1,error:r.message})}return!0}else n(o)}});document.addEventListener("visibilitychange",()=>{document.hidden||setTimeout(()=>{Ze().then(e=>{chrome.runtime.sendMessage({action:"authStateRefreshed",authState:e}).catch(()=>{})})},500)});window.addEventListener("focus",()=>{setTimeout(()=>{Ze().then(e=>{chrome.runtime.sendMessage({action:"authStateRefreshed",authState:e}).catch(()=>{})})},500)});function Ke(e){e.queueTaskId&&chrome.runtime.sendMessage({action:"queueTaskUpdate",taskId:e.queueTaskId,updates:{status:e.status}}).catch(()=>{})}console.log("✅ State Manager module loaded");const Je=Object.freeze(Object.defineProperty({__proto__:null,SELECTORS:Ot,STORAGE_KEY:Pe,clearCountdownTimer:Ge,clearStateFromStorage:Dt,formatTime:Tn,getCurrentTask:En,getCurrentTaskByStatus:vn,getEffectiveSetting:qe,getRandomDelay:kn,getSettings:hn,getState:ue,getTaskByIndex:Sn,getTaskList:wn,init:It,loadStateFromStorage:Te,saveStateToStorage:Ee,sendTaskUpdate:Ke,setState:ee,startCountdown:In,updateSettings:yn,updateTask:xn,verifyAuthenticationState:Ze},Symbol.toStringTag,{value:"Module"}));let Ce=null;function Pn(e){Ce=e,console.log("✅ TextInjector initialized")}function we(e,t=[]){return new Promise(n=>{chrome.runtime.sendMessage({action:"executeInMainWorld",funcBody:e,args:t},o=>{chrome.runtime.lastError?n({success:!1,error:chrome.runtime.lastError.message}):n(o||{success:!1,error:"No response"})})})}const Cn=120;async function An(e){var t;try{const n=document.querySelector('[data-slate-editor="true"]');return n?((t=(Ce?Ce():{}).settings)==null?void 0:t.stealthMode)||!1?e.length>Cn?(console.log(`🥷 Stealth Mode: Long prompt (${e.length} chars) — using human-like paste simulation...`),await Mn(n,e)?(console.log("✅ Text pasted with human-like behavior (Slate.js)"),!0):(console.log("⏸️ Paste was interrupted or failed"),!1)):(console.log(`🥷 Stealth Mode: Short prompt (${e.length} chars) — using human-like typing...`),await _n(n,e)?(console.log("✅ Text typed with human-like behavior (Slate.js)"),!0):(console.log("⏸️ Typing was interrupted"),!1)):await Ut(n,e):(console.error('🔴 Flow Slate editor [data-slate-editor="true"] not found'),!1)}catch(n){return console.error("❌ Error injecting text into Slate.js editor:",n),!1}}async function Ut(e,t){e.focus(),e.click(),await h(200);const n=window.getSelection(),o=document.createRange();o.selectNodeContents(e),n.removeAllRanges(),n.addRange(o),await h(100),e.dispatchEvent(new InputEvent("beforeinput",{bubbles:!0,cancelable:!0,inputType:"insertText",data:t})),await h(400);const r=e.textContent.trim();return r===t||r.includes(t.substring(0,20))?(console.log("✅ Text injected successfully into Slate.js Flow editor"),!0):(console.warn("⚠️ Text injection may have failed. Got:",JSON.stringify(r.substring(0,50))),!0)}async function Mn(e,t){const n=300+Math.random()*600;console.log(`🥷 Paste simulation: thinking pause ${Math.round(n)}ms...`),await h(n),e.focus(),e.click(),await h(150+Math.random()*100);const o=window.getSelection(),r=document.createRange();r.selectNodeContents(e),o.removeAllRanges(),o.addRange(r),await h(80+Math.random()*80);const i=new DataTransfer;i.setData("text/plain",t),i.setData("text/html",`<span>${t.replace(/\n/g,"<br>")}</span>`);const a=new ClipboardEvent("paste",{bubbles:!0,cancelable:!0,clipboardData:i});e.dispatchEvent(a),await h(300+Math.random()*200);const l=e.textContent.trim(),d=t.trim();return l===d||l.includes(d.substring(0,30))?(console.log("✅ Paste simulation: SUCCESS"),!0):(console.warn("⚠️ Paste simulation: Slate ignored paste event — falling back to fast inject"),await Ut(e,t))}const Ln={a:["q","w","s","z"],b:["v","g","h","n"],c:["x","d","f","v"],d:["s","e","r","f","c"],e:["w","r","d"],f:["d","r","t","g","v"],g:["f","t","y","h","b"],h:["g","y","u","j","n"],i:["u","o","k"],j:["h","u","i","k","n"],k:["j","i","o","l"],l:["k","o","p"],m:["n","j","k"],n:["b","h","j","m"],o:["i","p","l","k"],p:["o","l"],q:["w","a"],r:["e","t","f"],s:["a","w","e","d","z"],t:["r","y","g"],u:["y","i","h","j"],v:["c","f","g","b"],w:["q","e","s"],x:["z","s","d","c"],y:["t","u","g","h"],z:["a","s"]},Rn=new Set(["th","he","in","er","an","re","on","en","at","es","ti","or"]);async function _n(e,t){var i,a;const n=await we(`
+(function() {
+	//#region \0rolldown/runtime.js
+	var __defProp = Object.defineProperty;
+	var __exportAll = (all, no_symbols) => {
+		let target = {};
+		for (var name in all) __defProp(target, name, {
+			get: all[name],
+			enumerable: true
+		});
+		if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+		return target;
+	};
+	//#endregion
+	//#region src/content/constants.js
+	var SELECTORS = {
+		PROMPT_POLICY_ERROR_POPUP_XPATH: "//li[@data-sonner-toast and .//i[normalize-space(text())='error'] and not(.//*[contains(., '5')])]",
+		QUEUE_FULL_POPUP_XPATH: "//li[@data-sonner-toast and .//i[normalize-space(text())='error'] and .//*[contains(., '5')]]"
+	};
+	var STORAGE_KEY = "flowAutomationState";
+	var MODEL_DISPLAY_NAMES = {
+		default: "Veo 3.1 - Fast",
+		veo3_fast: "Veo 3.1 - Fast",
+		veo3_quality: "Veo 3.1 - Quality",
+		veo2_fast: "Veo 2 - Fast",
+		veo2_quality: "Veo 2 - Quality",
+		veo3_fast_low: "Veo 3.1 - Fast",
+		nano_banana_pro: "Nano Banana Pro",
+		nano_banana2: "Nano Banana 2",
+		nano_banana: "Nano Banana 2",
+		imagen4: "Imagen 4"
+	};
+	var MONITORING_TIMEOUTS = {
+		IMAGE_STALL: 3e4,
+		IMAGE_ZERO_TILES: 6e4,
+		VIDEO_STALL: 9e4,
+		VIDEO_ZERO_TILES: 18e4
+	};
+	var DEFAULT_SETTINGS = {
+		autoDownload: true,
+		delayBetweenPrompts: 8e3,
+		delayMin: 15,
+		delayMax: 30,
+		flowVideoCount: "1",
+		flowModel: "default",
+		flowAspectRatio: "landscape",
+		imageDownloadQuality: "1K",
+		videoDownloadQuality: "720p",
+		autoClearCache: false,
+		autoClearCacheInterval: 50
+	};
+	var RETRY_DELAY_MS = 5e3;
+	var INTER_TASK_DELAY_FALLBACK_MS = 15e3;
+	var DEFAULT_SCAN_INTERVAL_MS = 5e3;
+	var FLOW_PAGE_ZOOM_FACTOR = .75;
+	var IMAGE_UPLOADER_DELAYS = {
+		UPLOAD_BETWEEN_FILES: 500,
+		UPLOAD_SETTLE: 3e3,
+		SEARCH_POLL: 300,
+		SEARCH_SETTLE: 400,
+		AFTER_ATTACH: 500
+	};
+	var IMAGE_UPLOADER_TIMEOUTS = {
+		PICKER_OPEN: 8e3,
+		SEARCH_RESULT: 15e3,
+		PICKER_CLOSE: 8e3,
+		LIBRARY_SEARCH: 5e3
+	};
+	var DOWNLOAD_QUALITY_DEFAULTS = {
+		image: "1K",
+		video: "720p"
+	};
+	//#endregion
+	//#region src/content/domUtils.js
+	function h(ms) {
+		return new Promise((resolve) => setTimeout(resolve, ms));
+	}
+	function $(xpath, context = document) {
+		try {
+			return document.evaluate(xpath, context, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+		} catch (error) {
+			console.error("❌ XPath evaluation error:", error, "\nXPath:", xpath);
+			return null;
+		}
+	}
+	async function waitForElement(selector, timeoutMs = 5e3) {
+		const start = Date.now();
+		while (Date.now() - start < timeoutMs) {
+			const element = document.querySelector(selector);
+			if (element) return element;
+			await h(100);
+		}
+		return null;
+	}
+	function re() {
+		document.body.dispatchEvent(new KeyboardEvent("keydown", {
+			key: "Escape",
+			keyCode: 27,
+			bubbles: true,
+			cancelable: true,
+			composed: true
+		}));
+	}
+	function centerOf(element) {
+		const rect = element.getBoundingClientRect();
+		return {
+			x: rect.left + rect.width / 2,
+			y: rect.top + rect.height / 2
+		};
+	}
+	//#endregion
+	//#region src/content/eventBus.js
+	var eventBus_exports = /* @__PURE__ */ __exportAll({
+		EVENTS: () => EVENTS,
+		clear: () => clear,
+		clearAll: () => clearAll,
+		debugListeners: () => debugListeners,
+		emit: () => emit,
+		off: () => off,
+		on: () => on,
+		once: () => once
+	});
+	var EVENTS = {
+		QUEUE_NEXT: "queue:next",
+		PROCESSING_COMPLETE: "processing:complete",
+		PROCESSING_STOP: "processing:stop",
+		PROCESSING_TERMINATE: "processing:terminate",
+		TASK_START: "task:start",
+		TASK_COMPLETED: "task:completed",
+		TASK_ERROR: "task:error",
+		TASK_SKIPPED: "task:skipped",
+		DAILY_LIMIT_FALLBACK: "task:daily_limit_fallback",
+		OVERLAY_SHOW: "overlay:show",
+		OVERLAY_HIDE: "overlay:hide",
+		OVERLAY_MESSAGE: "overlay:message",
+		OVERLAY_PAUSING: "overlay:pausing",
+		OVERLAY_ERROR_BANNER: "overlay:error_banner",
+		OVERLAY_ERROR_BANNER_CLEAR: "overlay:error_banner_clear",
+		COUNTDOWN_START: "countdown:start",
+		PROGRESS_UPDATE: "progress:update"
+	};
+	var listeners = /* @__PURE__ */ new Map();
+	function on(event, handler) {
+		if (!listeners.has(event)) listeners.set(event, /* @__PURE__ */ new Set());
+		listeners.get(event).add(handler);
+		return () => off(event, handler);
+	}
+	function once(event, handler) {
+		const onceHandler = (payload) => {
+			off(event, onceHandler);
+			handler(payload);
+		};
+		on(event, onceHandler);
+	}
+	function off(event, handler) {
+		const eventListeners = listeners.get(event);
+		if (!eventListeners) return;
+		eventListeners.delete(handler);
+		if (eventListeners.size === 0) listeners.delete(event);
+	}
+	function emit(event, payload) {
+		const eventListeners = listeners.get(event);
+		if (!eventListeners || eventListeners.size === 0) return;
+		for (const handler of eventListeners) try {
+			handler(payload);
+		} catch (error) {
+			console.error(`❌ EventBus: handler error for event "${event}":`, error);
+		}
+	}
+	function clear(event) {
+		listeners.delete(event);
+	}
+	function clearAll() {
+		listeners.clear();
+	}
+	function debugListeners() {
+		const counts = {};
+		for (const [event, eventListeners] of listeners.entries()) counts[event] = eventListeners.size;
+		return counts;
+	}
+	//#endregion
+	//#region src/content/stateManager.js
+	var stateManager_exports = /* @__PURE__ */ __exportAll({
+		clearCountdownTimer: () => clearCountdownTimer$1,
+		clearStateFromStorage: () => clearStateFromStorage,
+		formatTime: () => formatTime,
+		getCurrentTask: () => getCurrentTask,
+		getCurrentTaskByStatus: () => getCurrentTaskByStatus,
+		getEffectiveSetting: () => getEffectiveSetting,
+		getRandomDelay: () => getRandomDelay,
+		getSettings: () => getSettings,
+		getState: () => getState$7,
+		getTaskByIndex: () => getTaskByIndex,
+		getTaskList: () => getTaskList,
+		init: () => init$8,
+		loadStateFromStorage: () => loadStateFromStorage,
+		saveStateToStorage: () => saveStateToStorage,
+		sendTaskUpdate: () => sendTaskUpdate,
+		setState: () => setState$4,
+		startCountdown: () => startCountdown,
+		updateSettings: () => updateSettings,
+		updateTask: () => updateTask,
+		verifyAuthenticationState: () => verifyAuthenticationState
+	});
+	var eventBus$3 = null;
+	var isUserLoggedIn = false;
+	var subscriptionStatus = null;
+	var userId = null;
+	var isProcessing = false;
+	var isPausing = false;
+	var currentPromptIndex = 0;
+	var prompts = [];
+	var settings = { ...DEFAULT_SETTINGS };
+	var isCurrentPromptProcessed = false;
+	var lastAppliedSettings = null;
+	var lastAppliedMode = null;
+	var fallbackModel = null;
+	var taskList = [];
+	var currentTaskIndex = 0;
+	var tileScanInterval = null;
+	var scanIntervalMs = DEFAULT_SCAN_INTERVAL_MS;
+	var currentProcessingPrompt = null;
+	var currentTaskStartTime = null;
+	var countdownInterval = null;
+	var maxRetries = 3;
+	var currentRetries = 0;
+	var preSubmitTileIds = /* @__PURE__ */ new Set();
+	function init$8(eventBusInstance, contentDownloadManagerInstance = null) {
+		eventBus$3 = eventBusInstance;
+	}
+	function getState$7() {
+		return {
+			isUserLoggedIn,
+			subscriptionStatus,
+			userId,
+			isProcessing,
+			isPausing,
+			currentPromptIndex,
+			prompts,
+			settings,
+			isCurrentPromptProcessed,
+			lastAppliedSettings,
+			lastAppliedMode,
+			fallbackModel,
+			taskList,
+			currentTaskIndex,
+			tileScanInterval,
+			scanIntervalMs,
+			currentProcessingPrompt,
+			currentTaskStartTime,
+			countdownInterval,
+			maxRetries,
+			currentRetries,
+			preSubmitTileIds
+		};
+	}
+	function setState$4(partial) {
+		if (partial.isUserLoggedIn !== void 0) isUserLoggedIn = partial.isUserLoggedIn;
+		if (partial.subscriptionStatus !== void 0) subscriptionStatus = partial.subscriptionStatus;
+		if (partial.userId !== void 0) userId = partial.userId;
+		if (partial.isProcessing !== void 0) {
+			const previousValue = isProcessing;
+			isProcessing = partial.isProcessing;
+			if (previousValue !== isProcessing) chrome.runtime.sendMessage({
+				action: "automationStateChanged",
+				isRunning: isProcessing
+			}).catch(() => {});
+		}
+		if (partial.isPausing !== void 0) isPausing = partial.isPausing;
+		if (partial.currentPromptIndex !== void 0) currentPromptIndex = partial.currentPromptIndex;
+		if (partial.prompts !== void 0) prompts = partial.prompts;
+		if (partial.settings !== void 0) settings = partial.settings;
+		if (partial.isCurrentPromptProcessed !== void 0) isCurrentPromptProcessed = partial.isCurrentPromptProcessed;
+		if (partial.lastAppliedSettings !== void 0) lastAppliedSettings = partial.lastAppliedSettings;
+		if (partial.lastAppliedMode !== void 0) lastAppliedMode = partial.lastAppliedMode;
+		if (partial.fallbackModel !== void 0) fallbackModel = partial.fallbackModel;
+		if (partial.taskList !== void 0) taskList = partial.taskList;
+		if (partial.currentTaskIndex !== void 0) currentTaskIndex = partial.currentTaskIndex;
+		if (partial.tileScanInterval !== void 0) tileScanInterval = partial.tileScanInterval;
+		if (partial.scanIntervalMs !== void 0) scanIntervalMs = partial.scanIntervalMs;
+		if (partial.currentProcessingPrompt !== void 0) currentProcessingPrompt = partial.currentProcessingPrompt;
+		if (partial.currentTaskStartTime !== void 0) currentTaskStartTime = partial.currentTaskStartTime;
+		if (partial.countdownInterval !== void 0) countdownInterval = partial.countdownInterval;
+		if (partial.maxRetries !== void 0) maxRetries = partial.maxRetries;
+		if (partial.currentRetries !== void 0) currentRetries = partial.currentRetries;
+		if (partial.preSubmitTileIds !== void 0) preSubmitTileIds = partial.preSubmitTileIds;
+	}
+	function getSettings() {
+		return settings;
+	}
+	function updateSettings(partial) {
+		settings = {
+			...settings,
+			...partial
+		};
+	}
+	function getTaskList() {
+		return taskList;
+	}
+	function updateTask(index, partial) {
+		if (!taskList[index]) return;
+		taskList[index] = {
+			...taskList[index],
+			...partial
+		};
+	}
+	function getCurrentTask() {
+		return taskList[currentPromptIndex] || null;
+	}
+	function getTaskByIndex(index) {
+		return taskList.find((task) => task.index === index) || null;
+	}
+	function getCurrentTaskByStatus() {
+		return taskList.find((task) => task.status === "current") || null;
+	}
+	function getEffectiveSetting(task, key, fallbackSettings) {
+		if (task && task.settings && task.settings[key] !== void 0) return task.settings[key];
+		return fallbackSettings[key];
+	}
+	async function saveStateToStorage() {
+		const snapshot = {
+			status: isProcessing ? "running" : "paused",
+			isProcessing,
+			prompts: prompts.map((prompt) => prompt),
+			currentIndex: currentPromptIndex,
+			totalPrompts: prompts.length,
+			processedCount: currentPromptIndex,
+			currentPrompt: prompts[currentPromptIndex] || "",
+			settings,
+			startTime: Date.now(),
+			lastUpdate: Date.now(),
+			taskList,
+			currentTaskIndex
+		};
+		return new Promise((resolve) => {
+			chrome.storage.local.set({ [STORAGE_KEY]: snapshot }, () => resolve(snapshot));
+		});
+	}
+	async function loadStateFromStorage() {
+		return new Promise((resolve) => {
+			chrome.storage.local.get(STORAGE_KEY, (result) => {
+				resolve(result["flowAutomationState"] || null);
+			});
+		});
+	}
+	async function clearStateFromStorage() {
+		return new Promise((resolve) => {
+			chrome.storage.local.remove(STORAGE_KEY, () => resolve());
+		});
+	}
+	function clearCountdownTimer$1() {
+		if (!countdownInterval) return;
+		clearInterval(countdownInterval);
+		countdownInterval = null;
+	}
+	function formatTime(ms) {
+		const totalSeconds = Math.floor(ms / 1e3);
+		const minutes = Math.floor(totalSeconds / 60);
+		const seconds = totalSeconds % 60;
+		return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+	}
+	function startCountdown(ms, label) {
+		clearCountdownTimer$1();
+		let remainingMs = ms;
+		const startedAt = Date.now();
+		const seconds = (ms / 1e3).toFixed(1);
+		eventBus$3?.emit(EVENTS.OVERLAY_MESSAGE, `⏱️ Waiting ${seconds}s before ${label}...`);
+		countdownInterval = setInterval(() => {
+			remainingMs = ms - (Date.now() - startedAt);
+			if (remainingMs <= 0) {
+				clearCountdownTimer$1();
+				eventBus$3?.emit(EVENTS.OVERLAY_MESSAGE, `▶️ Starting ${label}...`);
+				return;
+			}
+			const nextSeconds = (remainingMs / 1e3).toFixed(1);
+			eventBus$3?.emit(EVENTS.OVERLAY_MESSAGE, `⏱️ Waiting ${nextSeconds}s before ${label}...`);
+		}, 100);
+	}
+	function getRandomDelay(task, fallbackSettings) {
+		let minSeconds = getEffectiveSetting(task, "delayMin", fallbackSettings);
+		let maxSeconds = getEffectiveSetting(task, "delayMax", fallbackSettings);
+		if (minSeconds === void 0 || maxSeconds === void 0) {
+			const delayBetweenPrompts = getEffectiveSetting(task, "delayBetweenPrompts", fallbackSettings) || 15e3 / 1e3;
+			minSeconds = delayBetweenPrompts / 1e3;
+			maxSeconds = delayBetweenPrompts / 1e3;
+		}
+		if (minSeconds > maxSeconds) [minSeconds, maxSeconds] = [maxSeconds, minSeconds];
+		const delaySeconds = minSeconds + Math.random() * (maxSeconds - minSeconds);
+		return Math.round(delaySeconds * 1e3);
+	}
+	function sendTaskUpdate(task) {
+		if (!task.queueTaskId) return;
+		chrome.runtime.sendMessage({
+			action: "queueTaskUpdate",
+			taskId: task.queueTaskId,
+			updates: { status: task.status }
+		}).catch(() => {});
+	}
+	async function verifyAuthenticationState() {
+		return new Promise((resolve) => {
+			let attempts = 0;
+			const maxAttempts = 3;
+			const retryDelayMs = 1e3;
+			const attempt = () => {
+				chrome.runtime.sendMessage({ action: "getAuthState" }, (response) => {
+					if (chrome.runtime.lastError) {
+						if (attempts < maxAttempts) {
+							attempts += 1;
+							setTimeout(attempt, retryDelayMs);
+							return;
+						}
+						resolve({
+							isLoggedIn: false,
+							subscriptionStatus: null,
+							error: "Could not verify authentication state"
+						});
+						return;
+					}
+					if (response) {
+						isUserLoggedIn = response.isLoggedIn;
+						subscriptionStatus = response.subscriptionStatus;
+						resolve(response);
+						return;
+					}
+					if (attempts < maxAttempts) {
+						attempts += 1;
+						setTimeout(attempt, retryDelayMs);
+						return;
+					}
+					resolve({
+						isLoggedIn: false,
+						subscriptionStatus: null,
+						error: "No response from background script"
+					});
+				});
+			};
+			attempt();
+		});
+	}
+	(async () => {
+		const storedState = await loadStateFromStorage();
+		if (!storedState || storedState.status !== "paused") return;
+		prompts = storedState.prompts || [];
+		currentPromptIndex = storedState.currentIndex || 0;
+		settings = storedState.settings || settings;
+		taskList = storedState.taskList || [];
+		currentTaskIndex = storedState.currentTaskIndex || 0;
+		isProcessing = false;
+		console.log(`📋 Restored ${taskList.length} tasks from storage`);
+		chrome.runtime.sendMessage({
+			action: "stateRestored",
+			state: storedState
+		}).catch(() => {});
+		if (taskList.length > 0) taskList.forEach((task) => sendTaskUpdate(task));
+	})();
+	//#endregion
+	//#region src/content/textInjector.js
+	var getState$6 = null;
+	function init$7(getStateFn) {
+		getState$6 = getStateFn;
+	}
+	function executeInMainWorld$1(funcBody, args = []) {
+		return new Promise((resolve) => {
+			chrome.runtime.sendMessage({
+				action: "executeInMainWorld",
+				funcBody,
+				args
+			}, (response) => {
+				if (chrome.runtime.lastError) {
+					resolve({
+						success: false,
+						error: chrome.runtime.lastError.message
+					});
+					return;
+				}
+				resolve(response || {
+					success: false,
+					error: "No response"
+				});
+			});
+		});
+	}
+	async function injectText(text) {
+		try {
+			const editorElement = document.querySelector("[data-slate-editor=\"true\"]");
+			if (!editorElement) {
+				console.error("🔴 Flow Slate editor [data-slate-editor=\"true\"] not found");
+				return false;
+			}
+			if (!(getState$6?.().settings?.stealthMode || false)) return fastInject(editorElement, text);
+			if (text.length > 120) {
+				console.log(`🥷 Stealth Mode: Long prompt (${text.length} chars) — using human-like paste simulation...`);
+				return stealthPaste(editorElement, text);
+			}
+			console.log(`🥷 Stealth Mode: Short prompt (${text.length} chars) — using human-like typing...`);
+			return stealthTyping(editorElement, text);
+		} catch (error) {
+			console.error("❌ Error injecting text into Slate.js editor:", error);
+			return false;
+		}
+	}
+	async function fastInject(editorElement, text) {
+		editorElement.focus();
+		editorElement.click();
+		await h(200);
+		const selection = window.getSelection();
+		const range = document.createRange();
+		range.selectNodeContents(editorElement);
+		selection.removeAllRanges();
+		selection.addRange(range);
+		await h(100);
+		editorElement.dispatchEvent(new InputEvent("beforeinput", {
+			bubbles: true,
+			cancelable: true,
+			inputType: "insertText",
+			data: text
+		}));
+		await h(400);
+		const currentText = editorElement.textContent.trim();
+		if (currentText === text || currentText.includes(text.substring(0, 20))) {
+			console.log("✅ Text injected successfully into Slate.js Flow editor");
+			return true;
+		}
+		console.warn("⚠️ Text injection may have failed. Got:", JSON.stringify(currentText.substring(0, 50)));
+		return true;
+	}
+	async function stealthPaste(editorElement, text) {
+		const thinkingPause = 300 + Math.random() * 600;
+		console.log(`🥷 Paste simulation: thinking pause ${Math.round(thinkingPause)}ms...`);
+		await h(thinkingPause);
+		editorElement.focus();
+		editorElement.click();
+		await h(150 + Math.random() * 100);
+		const selection = window.getSelection();
+		const range = document.createRange();
+		range.selectNodeContents(editorElement);
+		selection.removeAllRanges();
+		selection.addRange(range);
+		await h(80 + Math.random() * 80);
+		const dataTransfer = new DataTransfer();
+		dataTransfer.setData("text/plain", text);
+		dataTransfer.setData("text/html", `<span>${text.replace(/\n/g, "<br>")}</span>`);
+		editorElement.dispatchEvent(new ClipboardEvent("paste", {
+			bubbles: true,
+			cancelable: true,
+			clipboardData: dataTransfer
+		}));
+		await h(300 + Math.random() * 200);
+		const actual = editorElement.textContent.trim();
+		const expected = text.trim();
+		if (actual === expected || actual.includes(expected.substring(0, 30))) {
+			console.log("✅ Paste simulation: SUCCESS");
+			return true;
+		}
+		console.warn("⚠️ Paste simulation: Slate ignored paste event — falling back to fast inject");
+		return fastInject(editorElement, text);
+	}
+	var ADJACENT_KEYS = {
+		a: [
+			"q",
+			"w",
+			"s",
+			"z"
+		],
+		b: [
+			"v",
+			"g",
+			"h",
+			"n"
+		],
+		c: [
+			"x",
+			"d",
+			"f",
+			"v"
+		],
+		d: [
+			"s",
+			"e",
+			"r",
+			"f",
+			"c"
+		],
+		e: [
+			"w",
+			"r",
+			"d"
+		],
+		f: [
+			"d",
+			"r",
+			"t",
+			"g",
+			"v"
+		],
+		g: [
+			"f",
+			"t",
+			"y",
+			"h",
+			"b"
+		],
+		h: [
+			"g",
+			"y",
+			"u",
+			"j",
+			"n"
+		],
+		i: [
+			"u",
+			"o",
+			"k"
+		],
+		j: [
+			"h",
+			"u",
+			"i",
+			"k",
+			"n"
+		],
+		k: [
+			"j",
+			"i",
+			"o",
+			"l"
+		],
+		l: [
+			"k",
+			"o",
+			"p"
+		],
+		m: [
+			"n",
+			"j",
+			"k"
+		],
+		n: [
+			"b",
+			"h",
+			"j",
+			"m"
+		],
+		o: [
+			"i",
+			"p",
+			"l",
+			"k"
+		],
+		p: ["o", "l"],
+		q: ["w", "a"],
+		r: [
+			"e",
+			"t",
+			"f"
+		],
+		s: [
+			"a",
+			"w",
+			"e",
+			"d",
+			"z"
+		],
+		t: [
+			"r",
+			"y",
+			"g"
+		],
+		u: [
+			"y",
+			"i",
+			"h",
+			"j"
+		],
+		v: [
+			"c",
+			"f",
+			"g",
+			"b"
+		],
+		w: [
+			"q",
+			"e",
+			"s"
+		],
+		x: [
+			"z",
+			"s",
+			"d",
+			"c"
+		],
+		y: [
+			"t",
+			"u",
+			"g",
+			"h"
+		],
+		z: ["a", "s"]
+	};
+	var COMMON_DIGRAPHS = new Set([
+		"th",
+		"he",
+		"in",
+		"er",
+		"an",
+		"re",
+		"on",
+		"en",
+		"at",
+		"es",
+		"ti",
+		"or"
+	]);
+	async function stealthTyping(_editorElement, text) {
+		const initResult = await executeInMainWorld$1(`
     const el = document.querySelector('[data-slate-editor="true"]');
     if (!el) return 'error:Editor not found';
 
-    const fiberKey = Object.keys(el).find(k =>
-      k.startsWith('__reactFiber') || k.startsWith('__reactInternalInstance')
+    const fiberKey = Object.keys(el).find((key) =>
+      key.startsWith('__reactFiber') || key.startsWith('__reactInternalInstance')
     );
     if (!fiberKey) return 'error:React fiber not found on editor element';
 
     let node = el[fiberKey];
     let editor = null;
-    for (let i = 0; i < 100; i++) {
+
+    for (let index = 0; index < 100; index += 1) {
       if (!node) break;
-      const p = node.memoizedProps;
-      if (p && p.editor && typeof p.editor.apply === 'function' && p.editor.children) {
-        editor = p.editor;
+      const props = node.memoizedProps;
+      if (props && props.editor && typeof props.editor.apply === 'function' && props.editor.children) {
+        editor = props.editor;
         break;
       }
       node = node.return;
     }
+
     if (!editor) return 'error:Slate editor not found in fiber tree';
 
-    // Store on window for subsequent per-character calls
     window.__flowSlateEditor = editor;
 
-    // Clear any existing text
     const existing = editor.children[0]?.children[0]?.text || '';
     if (existing.length > 0) {
       editor.apply({ type: 'remove_text', path: [0, 0], offset: 0, text: existing });
     }
+
     return 'ok';
-  `);if(!n.success||(i=n.result)!=null&&i.startsWith("error:")){const l=n.error||((a=n.result)==null?void 0:a.replace("error:",""))||"Unknown error";return console.error("❌ Stealth Typing init failed:",l),!1}console.log("✅ Stealth Typing: Slate editor initialized via MAIN world fiber"),await h(200);let o="";console.log(`🥷 Stealth Typing: "${t.substring(0,40)}${t.length>40?"...":""}"`);for(let l=0;l<t.length;l++){const d=Ce?Ce():{};if(!d.isProcessing&&!d.isPausing)return console.log("⏸️ Stealth Typing: interrupted — processing stopped"),!1;const u=t[l],c=u.toLowerCase();if(/[a-z]/.test(c)&&Math.random()<.03){const E=Ln[c]||[c],I=E[Math.floor(Math.random()*E.length)];await we(`
+  `);
+		if (!initResult.success || initResult.result?.startsWith("error:")) {
+			const error = initResult.error || initResult.result?.replace("error:", "") || "Unknown error";
+			console.error("❌ Stealth Typing init failed:", error);
+			return false;
+		}
+		console.log("✅ Stealth Typing: Slate editor initialized via MAIN world fiber");
+		await h(200);
+		let previousChar = "";
+		console.log(`🥷 Stealth Typing: "${text.substring(0, 40)}${text.length > 40 ? "..." : ""}"`);
+		for (let index = 0; index < text.length; index += 1) {
+			const state = getState$6?.() || {};
+			if (!state.isProcessing && !state.isPausing) {
+				console.log("⏸️ Stealth Typing: interrupted — processing stopped");
+				return false;
+			}
+			const character = text[index];
+			const lower = character.toLowerCase();
+			if (/[a-z]/.test(lower) && Math.random() < .03) {
+				const nearbyKeys = ADJACENT_KEYS[lower] || [lower];
+				const typo = nearbyKeys[Math.floor(Math.random() * nearbyKeys.length)];
+				await executeInMainWorld$1(`
+          const editor = window.__flowSlateEditor;
+          if (editor) {
+            const offset = editor.children[0]?.children[0]?.text?.length || 0;
+            editor.apply({ type: 'insert_text', path: [0, 0], offset, text: args[0] });
+          }
+        `, [typo]);
+				await h(80 + Math.random() * 60);
+				await h(150 + Math.random() * 250);
+				await executeInMainWorld$1(`
+        const editor = window.__flowSlateEditor;
+        if (editor) {
+          const currentText = editor.children[0]?.children[0]?.text || '';
+          if (currentText.length > 0) {
+            editor.apply({
+              type: 'remove_text',
+              path: [0, 0],
+              offset: currentText.length - 1,
+              text: currentText[currentText.length - 1],
+            });
+          }
+        }
+      `);
+				await h(60 + Math.random() * 50);
+			}
+			await executeInMainWorld$1(`
         const editor = window.__flowSlateEditor;
         if (editor) {
           const offset = editor.children[0]?.children[0]?.text?.length || 0;
           editor.apply({ type: 'insert_text', path: [0, 0], offset, text: args[0] });
         }
-      `,[I]),await h(80+Math.random()*60),await h(150+Math.random()*250),await we(`
-        const editor = window.__flowSlateEditor;
-        if (editor) {
-          const t = editor.children[0]?.children[0]?.text || '';
-          if (t.length > 0) {
-            editor.apply({ type: 'remove_text', path: [0, 0], offset: t.length - 1, text: t[t.length - 1] });
-          }
-        }
-      `),await h(60+Math.random()*50)}await we(`
-      const editor = window.__flowSlateEditor;
-      if (editor) {
-        const offset = editor.children[0]?.children[0]?.text?.length || 0;
-        editor.apply({ type: 'insert_text', path: [0, 0], offset, text: args[0] });
-      }
-    `,[u]);const s=o+c;let m;Rn.has(s)?m=50+Math.random()*40:u===" "?m=120+Math.random()*150:u===","||u==="."?m=150+Math.random()*200:m=80+Math.random()*120;const w=l-t.lastIndexOf(" ",l);w>5&&(m+=w*2),Math.random()<.03&&(m+=400+Math.random()*800),o=c,await h(m)}await h(400);const r=await we(`
+      `, [character]);
+			const digraph = previousChar + lower;
+			let delay;
+			if (COMMON_DIGRAPHS.has(digraph)) delay = 50 + Math.random() * 40;
+			else if (character === " ") delay = 120 + Math.random() * 150;
+			else if (character === "," || character === ".") delay = 150 + Math.random() * 200;
+			else delay = 80 + Math.random() * 120;
+			const charactersSinceSpace = index - text.lastIndexOf(" ", index);
+			if (charactersSinceSpace > 5) delay += charactersSinceSpace * 2;
+			if (Math.random() < .03) delay += 400 + Math.random() * 800;
+			previousChar = lower;
+			await h(delay);
+		}
+		await h(400);
+		const validationResult = await executeInMainWorld$1(`
     const editor = window.__flowSlateEditor;
     return editor ? (editor.children[0]?.children[0]?.text || '') : '';
-  `);if(r.success){const l=r.result||"";l===t?console.log("✅ Stealth Typing: SUCCESS — text matches exactly"):(console.warn("⚠️ Stealth Typing: mismatch. Got:     ",JSON.stringify(l.substring(0,60))),console.warn("⚠️ Stealth Typing: Expected:",JSON.stringify(t.substring(0,60))))}return!0}console.log("✅ TextInjector module loaded");let nt=null;function On(e){nt=e,console.log("✅ SubmitHandler initialized")}function Dn(e,t=[]){return new Promise(n=>{chrome.runtime.sendMessage({action:"executeInMainWorld",funcBody:e,args:t},o=>{chrome.runtime.lastError?n({success:!1,error:chrome.runtime.lastError.message}):n(o||{success:!1,error:"No response"})})})}async function Un(){var e;try{return((e=(nt?nt():{}).settings)==null?void 0:e.stealthMode)||!1?await $n():$t()}catch(t){return console.error("❌ Error in clickSubmit:",t),!1}}async function $n(){var t,n;console.log("🥷 Stealth Mode: Triggering submit via React fiber onClick (MAIN world)...");const e=await Dn(`
-    // Find submit button: arrow_forward icon + span with text
+  `);
+		if (validationResult.success) {
+			const actual = validationResult.result || "";
+			if (actual === text) console.log("✅ Stealth Typing: SUCCESS — text matches exactly");
+			else {
+				console.warn("⚠️ Stealth Typing: mismatch. Got:     ", JSON.stringify(actual.substring(0, 60)));
+				console.warn("⚠️ Stealth Typing: Expected:", JSON.stringify(text.substring(0, 60)));
+			}
+		}
+		return true;
+	}
+	//#endregion
+	//#region src/content/submitHandler.js
+	var getState$5 = null;
+	function init$6(getStateFn) {
+		getState$5 = getStateFn;
+	}
+	function executeInMainWorld(funcBody, args = []) {
+		return new Promise((resolve) => {
+			chrome.runtime.sendMessage({
+				action: "executeInMainWorld",
+				funcBody,
+				args
+			}, (response) => {
+				if (chrome.runtime.lastError) {
+					resolve({
+						success: false,
+						error: chrome.runtime.lastError.message
+					});
+					return;
+				}
+				resolve(response || {
+					success: false,
+					error: "No response"
+				});
+			});
+		});
+	}
+	async function clickSubmit() {
+		try {
+			if (getState$5?.().settings?.stealthMode || false) return stealthSubmit();
+			return domClick();
+		} catch (error) {
+			console.error("❌ Error in clickSubmit:", error);
+			return false;
+		}
+	}
+	async function stealthSubmit() {
+		console.log("🥷 Stealth Mode: Triggering submit via React fiber onClick (MAIN world)...");
+		const response = await executeInMainWorld(`
     const buttons = Array.from(document.querySelectorAll('button'));
-    const submitBtn = buttons.find(btn => {
+    const submitBtn = buttons.find((btn) => {
       const hasArrowForward = btn.querySelector('i')?.textContent.trim() === 'arrow_forward';
-      const hasSpanText     = btn.querySelector('span')?.textContent.trim().length > 0;
+      const hasSpanText = btn.querySelector('span')?.textContent.trim().length > 0;
       return hasArrowForward && hasSpanText;
     });
     if (!submitBtn) return 'error:Submit button not found';
 
-    // Walk fiber tree to find onClick prop
-    const fiberKey = Object.keys(submitBtn).find(k =>
-      k.startsWith('__reactFiber') || k.startsWith('__reactInternalInstance')
+    const fiberKey = Object.keys(submitBtn).find((key) =>
+      key.startsWith('__reactFiber') || key.startsWith('__reactInternalInstance')
     );
     if (!fiberKey) return 'error:React fiber not found on submit button';
 
     let node = submitBtn[fiberKey];
     let onClick = null;
-    for (let i = 0; i < 50; i++) {
+
+    for (let index = 0; index < 50; index += 1) {
       if (!node) break;
-      const p = node.memoizedProps;
-      if (p && typeof p.onClick === 'function') {
-        onClick = p.onClick;
+      const props = node.memoizedProps;
+      if (props && typeof props.onClick === 'function') {
+        onClick = props.onClick;
         break;
       }
       node = node.return;
     }
+
     if (!onClick) return 'error:onClick prop not found in fiber tree';
 
-    // Call React handler directly — zero DOM events fired
     onClick({ type: 'click', preventDefault: () => {}, stopPropagation: () => {} });
     return 'ok';
-  `);if(!e.success||(t=e.result)!=null&&t.startsWith("error:")){const o=e.error||((n=e.result)==null?void 0:n.replace("error:",""))||"Unknown error";return console.error("❌ Stealth submit failed:",o),console.warn("⚠️ Falling back to DOM click for submit..."),$t()}return console.log("✅ Stealth submit triggered via React onClick prop (zero DOM events)"),!0}function $t(){const t=Array.from(document.querySelectorAll("button")).find(n=>{var i,a;const o=((i=n.querySelector("i"))==null?void 0:i.textContent.trim())==="arrow_forward",r=((a=n.querySelector("span"))==null?void 0:a.textContent.trim().length)>0;return o&&r});return t?(t.click(),console.log("✅ Submit button clicked (DOM)"),!0):(console.warn("⚠️ Submit button not found"),!1)}console.log("✅ SubmitHandler module loaded");function ht(e){const{x:t,y:n}=Tt(e),o={bubbles:!0,cancelable:!0,pointerId:1,pointerType:"mouse",isPrimary:!0,clientX:t,clientY:n};e.dispatchEvent(new PointerEvent("pointerdown",o)),e.dispatchEvent(new PointerEvent("pointerup",o))}function Vn(e){const{x:t,y:n}=Tt(e),o={bubbles:!0,cancelable:!0,clientX:t,clientY:n,button:0};e.dispatchEvent(new MouseEvent("mousedown",o)),e.dispatchEvent(new MouseEvent("mouseup",o)),e.dispatchEvent(new MouseEvent("click",o))}function Ue(e){return e.getAttribute("data-state")==="active"?!1:(Vn(e),!0)}function qn(e){const t=e.getBoundingClientRect(),n=(Math.random()-.5)*t.width*.6,o=(Math.random()-.5)*t.height*.6,r=t.left+t.width/2+n,i=t.top+t.height/2+o;console.log(`🎯 Stealth click at (${Math.round(r)}, ${Math.round(i)}) — offset (${Math.round(n)}px, ${Math.round(o)}px)`);const a={bubbles:!0,cancelable:!0,view:window,clientX:r,clientY:i,screenX:window.screenX+r,screenY:window.screenY+i,button:0};e.dispatchEvent(new PointerEvent("pointerdown",{...a,isPrimary:!0,buttons:1})),e.dispatchEvent(new MouseEvent("mousedown",{...a,buttons:1})),e.dispatchEvent(new PointerEvent("pointerup",{...a,isPrimary:!0,buttons:0})),e.dispatchEvent(new MouseEvent("mouseup",{...a,buttons:0})),e.dispatchEvent(new PointerEvent("click",{...a,isPrimary:!0})),e.dispatchEvent(new MouseEvent("click",a))}console.log("✅ ClickHelper module loaded");let Ae=null,ot=null;function zn(e,t){Ae=e,ot=t,console.log("✅ SettingsApplicator initialized")}const Fn={default:"Veo 3.1 - Fast",veo3_fast:"Veo 3.1 - Fast",veo3_quality:"Veo 3.1 - Quality",veo2_fast:"Veo 2 - Fast",veo2_quality:"Veo 2 - Quality",veo3_fast_low:"Veo 3.1 - Fast",nano_banana_pro:"Nano Banana Pro",nano_banana2:"Nano Banana 2",nano_banana:"Nano Banana 2",imagen4:"Imagen 4"};function Yn(e,t){return!e||!t?!1:e.count===t.count&&e.model===t.model&&e.aspectRatio===t.aspectRatio&&e.taskType===t.taskType&&e.videoSubMode===t.videoSubMode}async function Nn(e="createvideo",t={}){try{const n=Ae?Ae():{};if(!n.isProcessing&&!n.isPausing)return console.log("⏸️ Settings application cancelled — processing stopped"),!1;const o=(t==null?void 0:t.count)||"1",r=(t==null?void 0:t.model)||"default",i=(t==null?void 0:t.aspectRatio)||"landscape",a=(t==null?void 0:t.videoSubMode)||"frames",l=e==="createimage",d=l?"image":"videocam",u=l?"Image":"Video",c={count:o,model:r,aspectRatio:i,taskType:e,videoSubMode:a};if(n.lastAppliedSettings&&Yn(c,n.lastAppliedSettings))return console.log("⏩ Settings unchanged from previous task — SKIPPING (~5s saved)"),!0;console.log(`⚙️ Applying settings: type=${e}, count=${o}, model=${r}, ratio=${i}, subMode=${l?"n/a":a}`);const s=$("//button[@aria-haspopup='menu' and .//div[@data-type='button-overlay'] and text()[normalize-space() != '']]");if(!s)return console.warn("⚠️ Main settings trigger button not found"),!1;if(ht(s),console.log("✅ Step 1: Opened main control panel"),await h(600),!document.querySelector('[role="menu"][data-state="open"]'))return console.warn("⚠️ Control panel menu did not open"),!1;const w=$(`//button[@role='tab' and contains(@class,'flow_tab_slider_trigger') and .//i[normalize-space(text())='${d}']]`);if(w?Ue(w)?(console.log(`✅ Step 2: Selected output type: ${u}`),await h(400)):console.log(`⏩ Step 2: Output type already: ${u}`):console.warn(`⚠️ Output type tab "${u}" not found`),$e())return re(),!1;if(l)console.log("⏩ Step 3: Skipped (image task — no sub-mode)");else{const L=a==="ingredients"?"chrome_extension":"crop_free",B=a==="ingredients"?"Ingredients":"Frames",U=$(`//button[@role='tab' and contains(@class,'flow_tab_slider_trigger') and .//i[normalize-space(text())='${L}']]`);U?Ue(U)?(console.log(`✅ Step 3: Selected video sub-mode: ${B}`),await h(300)):console.log(`⏩ Step 3: Sub-mode already: ${B}`):console.warn(`⚠️ Sub-mode tab "${B}" not found`)}if($e())return re(),!1;const E=i==="portrait"?"crop_9_16":"crop_16_9",I=i==="portrait"?"Portrait":"Landscape",Q=$(`//button[@role='tab' and contains(@class,'flow_tab_slider_trigger') and .//i[normalize-space(text())='${E}']]`);if(Q?Ue(Q)?(console.log(`✅ Step 4: Selected aspect ratio: ${I}`),await h(300)):console.log(`⏩ Step 4: Aspect ratio already: ${I}`):console.warn(`⚠️ Aspect ratio tab "${I}" not found`),$e())return re(),!1;const Y=`x${o}`,G=$(`//button[@role='tab' and contains(@class,'flow_tab_slider_trigger') and normalize-space(text())='${Y}']`);if(G?Ue(G)?(console.log(`✅ Step 5: Selected count: ${Y}`),await h(300)):console.log(`⏩ Step 5: Count already: ${Y}`):console.warn(`⚠️ Count tab "${Y}" not found`),$e())return re(),!1;const K=Fn[r]||(l?"Nano Banana Pro":"Veo 3.1 - Fast"),O=$("//div[@role='menu' and @data-state='open']//button[@aria-haspopup='menu' and .//div[@data-type='button-overlay']]");if(!O)console.warn("⚠️ Model dropdown trigger not found inside control panel");else{ht(O),console.log("✅ Step 6a: Opened model dropdown"),await h(500);const L=$(`//div[@role='menuitem']//button[.//span[contains(normalize-space(text()),'${K}')]]`);L?(L.click(),console.log(`✅ Step 6b: Selected model: ${K}`),await h(400)):(console.warn(`⚠️ Model option "${K}" not found`),re(),await h(300))}return re(),await h(600),console.log("✅ Step 7: Control panel closed"),ot&&(ot({lastAppliedSettings:c,lastAppliedMode:e}),console.log("💾 Settings cached for next task comparison")),!0}catch(n){return console.error("❌ Error applying unified Flow settings:",n),re(),!1}}function $e(){const e=Ae?Ae():{};return!e.isProcessing&&!e.isPausing}console.log("✅ SettingsApplicator module loaded");let Me=null;const jn=500,yt=3e3,Vt=8e3,Gn=15e3,Kn=8e3,Bn=300,Hn=5e3;function Qn(e){Me=e,console.log("✅ ImageUploader initialized")}function et(){var t;return((t=(Me?Me():{}).settings)==null?void 0:t.stealthMode)===!0}function Xn(e){return Math.round(e*(.7+Math.random()*.6))}async function X(e){const t=et()?Xn(e):e;return h(t)}function Be(e){et()?qn(e):e.click()}async function qt(e,t){const n=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,"value").set;if(et()){const o=100+Math.random()*300;console.log(`🥷 Stealth: Input think pause ${Math.round(o)}ms before setting "${t}"...`),await h(o)}e.focus(),n.call(e,t),e.dispatchEvent(new Event("input",{bubbles:!0}))}async function Wn(){const e=document.querySelectorAll("button");let t=null;for(const n of e){const o=n.querySelector("i.google-symbols");if(o&&o.textContent.trim()==="close"&&n.querySelector("span")){t=n;break}}return t?(Be(t),console.log("🧹 ImageUploader Pre-flight: Clicked clear-references button — all attached references cleared"),await X(300),!0):(console.log("✅ ImageUploader Pre-flight: No attached references found — input area is clean"),!1)}async function Zn(e){if(!e||e.length===0)return console.warn("⚠️ ImageUploader.uploadAllImages: No images provided"),!1;console.log(`📤 ImageUploader Phase 1: Batch-checking ${e.length} file(s) in library (single picker session)...`);const t=e.map((a,l)=>a.name||`reference_${l+1}.jpg`),n=await to(t),o=e.length-n.size;let r=!1,i=0;for(let a=0;a<e.length;a++){if(Ft())return console.log("⏸️ ImageUploader: Processing stopped during file injection"),!1;const l=e[a],d=t[a],u=l.mimeType||"image/jpeg";if(n.has(d)){console.log(`⏩ ImageUploader Phase 1 [${a+1}/${e.length}]: "${d}" already in library — skipping upload`);continue}console.log(`📤 ImageUploader Phase 1 [${a+1}/${e.length}]: "${d}" not in library — uploading...`);const c=document.querySelector('input[type="file"][accept*="image"]');if(!c)return console.warn(`⚠️ ImageUploader Phase 1: File input not found for "${d}"`),!1;const s=ro(l.data,d,u);if(!s)return console.warn(`⚠️ ImageUploader Phase 1: Failed to convert "${d}" to File object`),!1;const m=new DataTransfer;m.items.add(s),c.files=m.files,c.dispatchEvent(new Event("change",{bubbles:!0})),console.log(`✅ ImageUploader Phase 1 [${a+1}/${e.length}]: "${d}" injected (${(s.size/1024).toFixed(1)} KB)`),r=!0,i++,i<o&&await X(jn)}return r?(console.log(`⏳ ImageUploader Phase 1 complete — waiting ${yt/1e3}s for uploads to settle...`),await h(yt)):console.log("⏩ ImageUploader Phase 1 complete — all images already in library, no settle wait needed"),!0}async function Jn(e,t="ingredients"){if(!e||e.length===0)return console.warn("⚠️ ImageUploader.attachAllImages: No images provided"),!1;console.log(`🔗 ImageUploader Phase 2: Attaching ${e.length} image(s) as references [${t}]...`);for(let n=0;n<e.length;n++){if(Ft())return console.log("⏸️ ImageUploader: Processing stopped during reference attachment"),!1;const r=e[n].name||`reference_${n+1}.jpg`,i=n;if(console.log(`🔗 ImageUploader Phase 2 [${n+1}/${e.length}]: Attaching "${r}" [${t}${t==="frames"?`/${i===0?"Start":"End"}`:""}]...`),!await eo(r,t,i))return console.error(`❌ ImageUploader Phase 2: Failed to attach "${r}"`),!1;console.log(`✅ ImageUploader Phase 2 [${n+1}/${e.length}]: "${r}" attached successfully`)}return console.log(`✅ ImageUploader Phase 2 complete — all ${e.length} image(s) attached`),!0}async function eo(e,t,n){const o=et(),r=no(t,n);if(!r)return console.warn(`⚠️ ImageUploader: ${t==="frames"?`Frames ${n===0?"Start":"End"} frame div`:"add_2 button"} trigger not found`),!1;Be(r),console.log(`✅ ImageUploader: Clicked trigger (${t}${t==="frames"?`/${n===0?"Start":"End"}`:""})`);const i=await kt('[role="dialog"][data-state="open"]',Vt);if(!i)return console.warn("⚠️ ImageUploader: Asset picker popover did not open"),!1;console.log("✅ ImageUploader: Asset picker popover opened"),await X(400);const a=i.querySelector('input[type="text"]');if(!a)return console.warn("⚠️ ImageUploader: Search input not found in popover"),me(),!1;await qt(a,e),console.log(`🔍 ImageUploader: Searching for "${e}"${o?" (stealth paste)":""}...`);const l=await zt(e,Gn);if(!l)return console.warn(`⚠️ ImageUploader: Search result for "${e}" not found (upload may not have completed yet)`),me(),!1;console.log(`✅ ImageUploader: Found search result for "${e}"`);const d=l.parentElement;return d?(o&&await h(150+Math.random()*200),Be(d),console.log(`✅ ImageUploader: Clicked result row for "${e}"`),await oo(Kn)?console.log("✅ ImageUploader: Popover closed — image attached as reference"):(console.warn("⚠️ ImageUploader: Popover did not close after clicking result — forcing close"),me(),await X(300)),await X(500),!0):(console.warn("⚠️ ImageUploader: Result row parent not found"),me(),!1)}async function to(e){const t=new Set;if(!e||e.length===0)return t;const n=$("//button[.//i[normalize-space(text())='add_2']]");if(!n)return console.warn("⚠️ ImageUploader library check: add_2 trigger not found — assuming all images need upload"),t;Be(n);const o=await kt('[role="dialog"][data-state="open"]',Vt);if(!o)return console.warn("⚠️ ImageUploader library check: Popover did not open — assuming all images need upload"),t;await X(300);const r=o.querySelector('input[type="text"]');if(!r)return console.warn("⚠️ ImageUploader library check: Search input not found — closing picker"),me(),t;for(let i=0;i<e.length;i++){const a=e[i];await qt(r,a),console.log(`🔍 ImageUploader library check [${i+1}/${e.length}]: Searching for "${a}"...`),await X(300),await zt(a,Hn)?(console.log(`✅ ImageUploader library check [${i+1}/${e.length}]: "${a}" found in library`),t.add(a)):console.log(`📭 ImageUploader library check [${i+1}/${e.length}]: "${a}" not in library — will upload`),i<e.length-1&&await X(200)}return me(),await X(400),console.log(`📊 ImageUploader library check complete: ${t.size}/${e.length} already in library`),t}function no(e,t){return $(e==="frames"?`//div[@aria-haspopup='dialog' and normalize-space(text())='${t===0?"Start":"End"}']`:"//button[.//i[normalize-space(text())='add_2']]")}async function zt(e,t){const n=Date.now();for(;Date.now()-n<t;){const o=document.querySelector(`[data-testid="virtuoso-item-list"] img[alt="${e}"]`);if(o)return o;await h(Bn)}return null}async function oo(e){const t=Date.now();for(;Date.now()-t<e;){if(!document.querySelector('[role="dialog"][data-state="open"]'))return!0;await h(200)}return!1}function me(){document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",keyCode:27,bubbles:!0,cancelable:!0,composed:!0}))}function ro(e,t,n){try{let o=e,r=n;if(e.startsWith("data:")){const[l,d]=e.split(",");o=d;const u=l.match(/:(.*?);/);u&&(r=u[1])}const i=atob(o),a=new Uint8Array(i.length);for(let l=0;l<i.length;l++)a[l]=i.charCodeAt(l);return new File([a],t,{type:r})}catch(o){return console.error("❌ ImageUploader: base64ToFile conversion failed:",o),null}}function Ft(){const e=Me?Me():{};return!e.isProcessing&&!e.isPausing}console.log("✅ ImageUploader module loaded");function xe(e,t){return[...e.querySelectorAll("i")].some(n=>n.textContent.trim()===t)}const Yt=[{type:"POLICY_VIOLATION",label:"Prompt flagged by content policy",detect:e=>xe(e,"warning")?[...e.querySelectorAll("a[href]")].some(n=>{const o=n.getAttribute("href")||"";return o.includes("/faq")||o.includes("/policies")||o.includes("policy")}):!1},{type:"DAILY_LIMIT_MODEL_FALLBACK",label:"Daily generation limit reached — switching to Imagen 4",detect:e=>!xe(e,"warning")||!xe(e,"refresh")?!1:e.textContent.includes("Nano Banana")},{type:"GENERATION_FAILED",label:"Generation failed — Flow encountered an error",detect:e=>xe(e,"warning")?xe(e,"refresh"):!1}],Nt=[];function io(e,t){const n=[];return document.querySelectorAll("[data-tile-id]").forEach(o=>{const r=o.getAttribute("data-tile-id");if(!(!r||e!=null&&e.has(r)||t!=null&&t.has(r)||o.querySelector('video[src*="media.getMediaUrlRedirect"]')||o.querySelector('img[src*="media.getMediaUrlRedirect"]'))){for(const a of Yt)if(a.detect(o)){t==null||t.add(r),n.push({tileId:r,type:a.type,label:a.label}),console.warn(`⚠️ ErrorScanner: tile ${r} — ${a.label}`);break}}}),{errorCount:n.length,errors:n}}function ao(){for(const e of Nt)if(e.detect())return console.error(`❌ ErrorScanner: global error — ${e.label} (severity: ${e.severity})`),{found:!0,type:e.type,label:e.label,severity:e.severity};return{found:!1,type:null,label:null,severity:null}}console.log(`✅ ErrorScanner module loaded — ${Yt.length} tile pattern(s), ${Nt.length} global pattern(s)`);let z=null,ze=null,Le=null,b=null,y=null,Fe=null,Ye=null,He=[],rt=!1;function jt({getState:e,setState:t,getSelectors:n,eventBus:o,stateManager:r}){z=e,ze=t,Le=n,b=o,y=r,o.on(p.PROCESSING_TERMINATE,()=>{ye(),le(),pt()}),console.log("✅ MonitoringExport initialized")}function so(){const e=new Set;return document.querySelectorAll("[data-tile-id]").forEach(t=>{const n=t.getAttribute("data-tile-id");n&&e.add(n)}),console.log(`📸 Tile snapshot: ${e.size} existing tile(s)`),e}function Gt(e){const t=!!e.querySelector('video[src*="media.getMediaUrlRedirect"]'),n=!!e.querySelector('img[src*="media.getMediaUrlRedirect"]');return t||n}function Kt(e){return!!e.querySelector("video")}function Bt(e){const t=[],n=new Set;return document.querySelectorAll("[data-tile-id]").forEach(o=>{const r=o.getAttribute("data-tile-id");!r||n.has(r)||(n.add(r),!(e&&e.has(r))&&Gt(o)&&t.push({tileId:r,tileEl:o,isVideo:Kt(o)}))}),t}function lo(e,t){const n=[...e.querySelectorAll('button[role="menuitem"], button')];if(n.length===0)return null;const o=n.map(i=>{var u;const l=((u=i.querySelectorAll("span")[0])==null?void 0:u.textContent.trim())||i.textContent.trim(),d=i.getAttribute("aria-disabled")!=="true";return{btn:i,label:l,enabled:d}}),r=o.filter(i=>i.enabled);if(t){const i=o.find(a=>a.label===t);if(i){if(i.enabled)return console.log(`⬇️ Download quality: "${i.label}" (selected)`),i.btn;console.warn(`⚠️ "${t}" is locked (aria-disabled). Falling back to best available.`)}else console.warn(`⚠️ Quality "${t}" not found in sub-menu. Falling back.`)}if(r.length>0){const i=r[r.length-1];return console.log(`⬇️ Download quality fallback: "${i.label}" (best available)`),i.btn}return console.warn("⚠️ All quality options disabled — clicking first button as last resort"),n[0]}async function Ht(e,t=null){try{const n=e.querySelector('video[src*="media.getMediaUrlRedirect"]')||e.querySelector('img[src*="media.getMediaUrlRedirect"]');if(!n)return console.warn("⚠️ No media element found in tile for download"),!1;const o=n.getBoundingClientRect(),r=o.left+o.width/2,i=o.top+o.height/2;n.dispatchEvent(new MouseEvent("mouseenter",{bubbles:!0,clientX:r,clientY:i})),n.dispatchEvent(new MouseEvent("mousemove",{bubbles:!0,clientX:r,clientY:i})),await h(400),n.dispatchEvent(new MouseEvent("contextmenu",{bubbles:!0,cancelable:!0,clientX:r,clientY:i,button:2})),await h(600);const a=document.querySelector('[data-radix-menu-content][data-state="open"]');if(!a)return console.warn("⚠️ Context menu did not open for tile download"),!1;const l=[...a.querySelectorAll('[role="menuitem"]')].find(s=>{var m;return((m=s.querySelector("i"))==null?void 0:m.textContent.trim())==="download"});if(!l)return console.warn("⚠️ Download menuitem not found in context menu"),document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:!0})),!1;l.click(),await h(600);const d=[...document.querySelectorAll('[data-radix-menu-content][data-state="open"]')],u=d.find(s=>s!==a)||d[d.length-1];if((!u||u===a)&&!([...document.querySelectorAll("[data-radix-popper-content-wrapper]")].flatMap(m=>[...m.querySelectorAll('[role="menuitem"]')]).length>0?document.querySelector("[data-radix-popper-content-wrapper]:last-of-type"):null))return console.warn("⚠️ Quality sub-menu did not open"),document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:!0})),!1;const c=lo(u,t);return c?(c.click(),await h(300),console.log("✅ Download triggered via UI"),!0):(console.warn("⚠️ No quality button found in sub-menu"),document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:!0})),!1)}catch(n){return console.error("❌ Error in downloadTileViaUI:",n),document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:!0})),!1}}async function co(){if(!rt){for(rt=!0;He.length>0;){const{tileEl:e,targetQuality:t,label:n}=He.shift();console.log(`⬇️ Download runner: processing "${n}" (quality: ${t??"default"})`),await Ht(e,t),await h(500)}pt(),console.log("✅ Download runner: queue empty, state reset")}}const wt={image:{stall:3e4,zeroTiles:6e4},video:{stall:9e4,zeroTiles:18e4}};async function Qt(){var t,n,o,r,i,a,l,d,u,c;const e=z?z():{};if(!(!e.isProcessing&&!e.isPausing))try{const s=(t=e.taskList)==null?void 0:t.find(x=>x.status==="current");if(!s)return;s.foundVideos||(s.foundVideos=0),s.processedTileIds||(s.processedTileIds=new Set),s._scanStartedAt||(s._scanStartedAt=Date.now(),b==null||b.emit(p.OVERLAY_ERROR_BANNER_CLEAR));const m=s.type==="createimage",{stall:w,zeroTiles:E}=m?wt.image:wt.video,I=e.preSubmitTileIds||new Set,Q=Bt(I);let Y=!1;for(const{tileId:x,tileEl:R,isVideo:oe}of Q){if(s.processedTileIds.has(x))continue;s.processedTileIds.add(x),s.foundVideos+=1,s._lastFoundAt=Date.now(),Y=!0;const Z=oe?"Video":"Image";if(console.log(`✅ New ${Z} detected: tile ${x} (${s.foundVideos}/${s.expectedVideos})`),b==null||b.emit(p.OVERLAY_MESSAGE,`✅ ${Z} ${s.foundVideos}/${s.expectedVideos} for Task ${s.index}`),chrome.runtime.sendMessage({action:"updateStatus",status:`${Z} ${s.foundVideos}/${s.expectedVideos} captured for Task ${s.index}`}),((n=e.settings)==null?void 0:n.autoDownload)!==!1){const D=oe?"videoDownloadQuality":"imageDownloadQuality",pe=((o=s.settings)==null?void 0:o[D])||((r=e.settings)==null?void 0:r[D])||(oe?"720p":"1K");He.push({tileEl:R,targetQuality:pe,label:`${Z} ${x}`}),co()}(i=y==null?void 0:y.sendTaskUpdate)==null||i.call(y,s)}const{errorCount:G,errors:K}=io(I,s.processedTileIds);if(G>0){if(K.every(D=>D.type==="DAILY_LIMIT_MODEL_FALLBACK")){console.warn(`🍌 Task ${s.index}: ALL tile errors are DAILY_LIMIT_MODEL_FALLBACK — triggering Imagen 4 fallback`),ye(),le(),b==null||b.emit(p.OVERLAY_MESSAGE,`⚠️ Nano Banana Pro daily limit reached — switching to Imagen 4 and retrying Task ${s.index}...`),chrome.runtime.sendMessage({action:"updateStatus",status:`Task ${s.index}: Nano Banana Pro limit hit — switching to Imagen 4`}),b==null||b.emit(p.DAILY_LIMIT_FALLBACK,{task:s,taskIndex:e.currentPromptIndex,fallbackModel:"imagen4"});return}s.foundVideos+=G,s._lastFoundAt=Date.now(),Y=!0;for(const D of K)console.warn(`⚠️ Tile error counted for task ${s.index}: [${D.type}] ${D.label} (tile ${D.tileId})`);const R=s.foundVideos,oe=s.expectedVideos,Z=K.reduce((D,pe)=>(D[pe.label]=(D[pe.label]||0)+1,D),{}),M=Object.entries(Z).map(([D,pe])=>`• ${pe}× ${D}`);b==null||b.emit(p.OVERLAY_ERROR_BANNER,{lines:M,taskIndex:s.index}),b==null||b.emit(p.OVERLAY_MESSAGE,`⚠️ ${G} tile error(s) — ${R}/${oe} resolved`),chrome.runtime.sendMessage({action:"updateStatus",status:`Task ${s.index}: ${G} error tile(s) — ${JSON.stringify(Z)} — ${R}/${oe} resolved`}),(a=y==null?void 0:y.sendTaskUpdate)==null||a.call(y,s)}const O=ao();if(O.found){if(console.error(`❌ Global error: [${O.type}] ${O.label} (severity: ${O.severity})`),b==null||b.emit(p.OVERLAY_MESSAGE,`❌ ${O.label}`),O.severity==="skip_task"&&s.status==="current"){s.status="error",(l=y==null?void 0:y.sendTaskUpdate)==null||l.call(y,s),Ve(s,e.currentPromptIndex);return}if(O.severity==="pause_processing"){b==null||b.emit(p.PROCESSING_STOP);return}if(O.severity==="terminate"){b==null||b.emit(p.PROCESSING_TERMINATE);return}}const L=Date.now(),B=s.expectedVideos-s.foundVideos,U=m?"image":"video";if(s.foundVideos>=s.expectedVideos&&s.status==="current"){s.status="processed";const x=s.type==="createimage"?"image(s)":"video(s)";console.log(`✅ Task ${s.index} COMPLETE (${s.foundVideos}/${s.expectedVideos} ${x})`),(d=y==null?void 0:y.sendTaskUpdate)==null||d.call(y,s),Ve(s,e.currentPromptIndex);return}if(s.foundVideos>0&&s._lastFoundAt&&L-s._lastFoundAt>w&&s.status==="current"){s.status="processed",console.warn(`⚠️ Task ${s.index}: stall timeout — ${s.foundVideos}/${s.expectedVideos} ${U}(s) (${B} failed)`),b==null||b.emit(p.OVERLAY_MESSAGE,`⚠️ Task ${s.index}: ${s.foundVideos}/${s.expectedVideos} ${U}s — ${B} failed. Continuing...`),chrome.runtime.sendMessage({action:"updateStatus",status:`Task ${s.index}: partial (${s.foundVideos}/${s.expectedVideos} ${U}s). Moving on.`}),(u=y==null?void 0:y.sendTaskUpdate)==null||u.call(y,s),Ve(s,e.currentPromptIndex);return}if(s.foundVideos===0&&s._scanStartedAt&&L-s._scanStartedAt>E&&s.status==="current"){s.status="error";const x=(E/6e4).toFixed(1);console.error(`❌ Task ${s.index}: zero ${U}s after ${x} min. All ${s.expectedVideos} generations failed.`),b==null||b.emit(p.OVERLAY_MESSAGE,`❌ Task ${s.index}: no ${U}s generated after ${x} min. Skipping...`),chrome.runtime.sendMessage({action:"updateStatus",status:`Task ${s.index}: all ${s.expectedVideos} ${U}(s) failed (${x}min). Skipping.`}),(c=y==null?void 0:y.sendTaskUpdate)==null||c.call(y,s),Ve(s,e.currentPromptIndex);return}if(s.foundVideos>0&&s._lastFoundAt&&!Y){const x=Math.round((L-s._lastFoundAt)/1e3),R=Math.round((w-(L-s._lastFoundAt))/1e3);x>0&&x%30<5&&console.log(`⏳ Task ${s.index} [${U}]: waiting for ${B} more — stalled ${x}s, timeout in ${R}s`)}}catch(s){console.error("❌ Error in periodicTileScanner:",s)}}function uo(){ye();const e=z?z():{};if(!e.isProcessing&&!e.isPausing)return;const t=e.scanIntervalMs||5e3;console.log(`🔍 Starting tile scanner (every ${t/1e3}s)`),Fe=setInterval(Qt,t)}function ye(){Fe&&(clearInterval(Fe),Fe=null,console.log("🛑 Tile scanner stopped"))}function pt(){He=[],rt=!1}function Xt(){try{const e=Le?Le():{};return!!$(e.QUEUE_FULL_POPUP_XPATH)}catch(e){return console.warn("⚠️ Error checking for queue full:",e),!1}}function mt(){try{const e=Le?Le():{};return!!$(e.PROMPT_POLICY_ERROR_POPUP_XPATH)}catch(e){return console.warn("⚠️ Error checking for policy error:",e),!1}}async function po(){await h(2e3);for(let e=0;e<10;e++){if(Xt())return console.warn("⚠️ Queue is full!"),"QUEUE_FULL";if(mt())return console.warn("⚠️ Prompt violates policy!"),"POLICY_PROMPT";await h(1e3)}return null}function mo(){le(),console.log("🔍 Starting error monitoring..."),Ye=setInterval(async()=>{var t,n,o,r;const e=z?z():{};if(!e.isProcessing&&!e.isPausing){le();return}if(mt()){console.error("❌ Policy error detected during generation!"),le(),ye();const i=(t=e.taskList)==null?void 0:t[e.currentPromptIndex];i&&(i.status="error",(n=y==null?void 0:y.sendTaskUpdate)==null||n.call(y,i)),b==null||b.emit(p.OVERLAY_MESSAGE,"⚠️ Policy violation detected. Skipping this prompt..."),chrome.runtime.sendMessage({action:"updateStatus",status:`Policy violation on prompt: "${(r=(o=e.prompts)==null?void 0:o[e.currentPromptIndex])==null?void 0:r.substring(0,30)}..."`}),setTimeout(()=>{(z?z():{}).isProcessing&&(ze==null||ze({isCurrentPromptProcessed:!0}),i&&(b==null||b.emit(p.TASK_COMPLETED,{task:i,taskIndex:e.currentPromptIndex})))},3e3)}},2e3)}function le(){Ye&&(clearInterval(Ye),Ye=null,console.log("🛑 Error monitoring stopped"))}function Ve(e,t){(z?z():{}).isCurrentPromptProcessed||(ye(),le(),setTimeout(()=>{const o=z?z():{};(o.isProcessing||o.isPausing)&&(b==null||b.emit(p.TASK_COMPLETED,{task:e,taskIndex:t}))},500))}console.log("✅ MonitoringExport module loaded (workflow layer, tile-based scanner — video/image/future)");const Wt=Object.freeze(Object.defineProperty({__proto__:null,checkForErrorsAfterSubmit:po,checkForPromptPolicyError:mt,checkForQueueFull:Xt,downloadTileViaUI:Ht,init:jt,isTileCompleted:Gt,isTileVideo:Kt,periodicTileScanner:Qt,resetDownloadQueue:pt,scanForNewlyCompletedTiles:Bt,snapshotExistingTileIds:so,startErrorMonitoring:mo,startTileScanner:uo,stopErrorMonitoring:le,stopTileScanner:ye},Symbol.toStringTag,{value:"Module"}));let C=null,A=null,g=null,P=null,_=null;function go({getState:e,setState:t,eventBus:n,monitoring:o,stateManager:r}){C=e,A=t,g=n,P=o,_=r,n.on(p.DAILY_LIMIT_FALLBACK,({task:i,taskIndex:a,fallbackModel:l})=>{console.warn(`🔄 DAILY_LIMIT_FALLBACK received — switching all tasks to model: ${l}`);const d=C==null?void 0:C();if(!d)return;A==null||A({fallbackModel:l});const u=d.taskList.map(c=>c.status==="pending"||c.status==="current"?{...c,settings:{...c.settings,model:l},processedTileIds:new Set,foundVideos:0,_scanStartedAt:null,_lastFoundAt:null,status:c.index===i.index?"pending":c.status}:c);A==null||A({taskList:u,lastAppliedSettings:null}),console.log(`✅ Model patched to "${l}" on ${u.filter(c=>c.status==="pending"||c.status==="current").length} task(s)`),setTimeout(()=>{const c=C==null?void 0:C();if(!(c!=null&&c.isProcessing)&&!(c!=null&&c.isPausing))return;const s=c.taskList.find(m=>m.index===i.index);s&&(console.log(`🔁 Re-running Task ${s.index} with fallback model "${l}"...`),g==null||g.emit(p.OVERLAY_MESSAGE,`🔁 Retrying Task ${s.index} with Imagen 4...`),gt(s,a))},2e3)}),console.log("✅ TaskRunner initialized")}async function gt(e,t){var E,I,Q,Y,G,K,O,L,B,U;if(!e){console.error("❌ TaskRunner: No task provided"),g==null||g.emit(p.TASK_ERROR,{task:null,reason:"no_task"});return}const n=e.prompt,o=e.type==="createimage",r=o?"createimage":"createvideo",i=o?"image":"video";A==null||A({currentProcessingPrompt:n,currentTaskStartTime:Date.now()});const a=`Processing ${r} task ${e.index}: "${n==null?void 0:n.substring(0,30)}${(n==null?void 0:n.length)>30?"...":""}"`;console.log(`📌 Task ${e.index} started`),g==null||g.emit(p.OVERLAY_MESSAGE,a);const l=(E=C==null?void 0:C())==null?void 0:E.fallbackModel;if(l&&((I=e.settings)==null?void 0:I.model)!==l&&(console.log(`🔄 Applying fallback model override: ${((Q=e.settings)==null?void 0:Q.model)??"default"} → ${l}`),e={...e,settings:{...e.settings,model:l}}),console.log(`⚙️ Step 0/4: Applying settings for Task ${e.index} (${r})...`),g==null||g.emit(p.OVERLAY_MESSAGE,`Step 0/4: Applying settings for ${r}...`),await Nn(e.type||"createvideo",e.settings||{}))console.log(`✅ Settings applied: ${r}, ${((Y=e.settings)==null?void 0:Y.count)||"1"} ${i}(s), ${((G=e.settings)==null?void 0:G.model)||"default"}, ${((K=e.settings)==null?void 0:K.aspectRatio)||"landscape"}`);else{const x=C==null?void 0:C();if(!(x!=null&&x.isProcessing)&&!(x!=null&&x.isPausing)){console.log("⏸️ Processing stopped during settings application");return}console.warn("⚠️ Failed to apply settings, continuing anyway...")}if(await h(500),e.referenceImages&&((O=e.referenceImages.images)==null?void 0:O.length)>0){const x=e.referenceImages.mode||"ingredients",R=e.referenceImages.images.filter(Boolean);if(R.length>0){if(console.log(`🧹 Step 1.5 pre-flight: Clearing any existing attached references for Task ${e.index}...`),g==null||g.emit(p.OVERLAY_MESSAGE,"Step 1.5/4: Clearing previous references..."),await Wn(),console.log(`🖼️ Step 1.5a/4: Checking/uploading ${R.length} file(s) into Flow [${x}] for Task ${e.index}...`),g==null||g.emit(p.OVERLAY_MESSAGE,`Step 1.5/4: Uploading ${R.length} reference image(s) to Flow library...`),!await Zn(R)){const M=C==null?void 0:C();if(!(M!=null&&M.isProcessing)&&!(M!=null&&M.isPausing)){console.log("⏸️ Processing stopped during file injection");return}console.error("❌ File injection failed — triggering retry"),g==null||g.emit(p.TASK_ERROR,{task:e,taskIndex:t,reason:"image_upload_failed"});return}if(console.log(`🔗 Step 1.5b/4: Attaching ${R.length} image(s) as references [${x}]...`),g==null||g.emit(p.OVERLAY_MESSAGE,`Step 1.5/4: Attaching ${R.length} reference image(s)...`),!await Jn(R,x)){const M=C==null?void 0:C();if(!(M!=null&&M.isProcessing)&&!(M!=null&&M.isPausing)){console.log("⏸️ Processing stopped during reference attachment");return}console.error("❌ Reference attachment failed — triggering retry"),g==null||g.emit(p.TASK_ERROR,{task:e,taskIndex:t,reason:"image_attach_failed"});return}console.log(`✅ All ${R.length} reference image(s) [${x}] uploaded and attached`),await h(500)}}if(console.log(`📝 Step 2/4: Injecting prompt for Task ${e.index}...`),g==null||g.emit(p.OVERLAY_MESSAGE,"Step 2/4: Adding prompt..."),!await An(n)){console.error("❌ Text injection failed — triggering retry"),g==null||g.emit(p.TASK_ERROR,{task:e,taskIndex:t,reason:"inject_failed"});return}if(await h(1e3),_==null||_.updateTask(t,{status:"current"}),g==null||g.emit(p.TASK_START,{task:((L=_==null?void 0:_.getCurrentTask)==null?void 0:L.call(_))??e,taskIndex:t}),console.log(`📋 Task ${e.index} status: current`),console.log(`🚀 Step 3/4: Submitting Task ${e.index}...`),g==null||g.emit(p.OVERLAY_MESSAGE,"Step 3/4: Submitting..."),P!=null&&P.snapshotExistingTileIds){const x=P.snapshotExistingTileIds();A==null||A({preSubmitTileIds:x}),console.log(`📸 Pre-submit tile snapshot: ${x.size} existing tile(s)`)}if(!await Un()){console.error("❌ Submit failed — triggering retry"),g==null||g.emit(p.TASK_ERROR,{task:e,taskIndex:t,reason:"submit_failed"});return}console.log(`✅ Submitted prompt: "${n}"`),console.log("🔍 Step 4/4: Monitoring for completion...");const s=o?"Step 4/4: Monitoring image generation...":"Step 4/4: Monitoring video generation...";g==null||g.emit(p.OVERLAY_MESSAGE,s);const m=P!=null&&P.checkForErrorsAfterSubmit?await P.checkForErrorsAfterSubmit():null;if(m==="QUEUE_FULL")return console.warn("⚠️ Queue full — waiting 30 seconds before retry..."),g==null||g.emit(p.OVERLAY_MESSAGE,"Queue is full. Waiting 30 seconds before retry..."),await h(3e4),gt(e,t);if(m==="POLICY_PROMPT"){console.error("❌ Prompt violates policy — skipping"),g==null||g.emit(p.OVERLAY_MESSAGE,"⚠️ Policy violation detected. Skipping this prompt..."),_==null||_.updateTask(t,{status:"error"}),_==null||_.sendTaskUpdate(e),g==null||g.emit(p.TASK_SKIPPED,{task:e,taskIndex:t,reason:"policy_violation"}),chrome.runtime.sendMessage({action:"updateStatus",status:`Policy violation on prompt: "${n==null?void 0:n.substring(0,30)}..."`}),await h(3e3),A==null||A({isCurrentPromptProcessed:!0}),g==null||g.emit(p.TASK_COMPLETED,{task:e,taskIndex:t});return}console.log("✅ No errors detected, starting tile scanner..."),(B=P==null?void 0:P.startTileScanner)==null||B.call(P),(U=P==null?void 0:P.startErrorMonitoring)==null||U.call(P);const w=o?"Generating images... scanning for images":"Generating flow... scanning for videos";console.log(`⏳ ${w}`),g==null||g.emit(p.OVERLAY_MESSAGE,w),A==null||A({currentRetries:0})}console.log("✅ TaskRunner module loaded");let f=null,F=null,v=null,Ie=null;const it=3,fo=5e3,bo=15e3;function ho({stateManager:e,eventBus:t,monitoring:n}){f=e,F=t,v=n,t.on(p.QUEUE_NEXT,()=>Qe()),t.on(p.TASK_START,wo),t.on(p.TASK_COMPLETED,en),t.on(p.TASK_SKIPPED,xo),t.on(p.TASK_ERROR,Eo),t.on(p.PROCESSING_STOP,xt),t.on(p.PROCESSING_TERMINATE,xt),console.log("✅ QueueController initialized")}function Qe(){var r;const e=f.getState();f.setState({isCurrentPromptProcessed:!1});const t=e.taskList.length>0?e.taskList.length:e.prompts.length;if(!e.isProcessing||e.currentPromptIndex>=t){f.setState({isProcessing:!1}),Jt(),F.emit(p.OVERLAY_HIDE),e.currentPromptIndex>=t&&(chrome.runtime.sendMessage({action:"updateStatus",status:"All flow prompts completed successfully!"}),chrome.runtime.sendMessage({action:"resetPageZoom"}).catch(()=>{}),(r=f.clearStateFromStorage)==null||r.call(f),F.emit(p.PROCESSING_COMPLETE));return}const n=e.prompts[e.currentPromptIndex]||"",o=n.length>30?n.substring(0,30)+"...":n;F.emit(p.OVERLAY_SHOW,`Processing Flow: "${o}"`),e.currentPromptIndex===0&&chrome.runtime.sendMessage({action:"setPageZoom",zoomFactor:.75}).catch(()=>{}),chrome.storage.local.get("quotaStatus",i=>{var l,d,u;const a=i.quotaStatus||{canContinue:!0,isPaid:!1};if(a.isPaid){Et();return}if(!a.canContinue){f.setState({isProcessing:!1}),F.emit(p.OVERLAY_HIDE);const c=(l=f.getCurrentTask)==null?void 0:l.call(f);c&&((d=f.updateTask)==null||d.call(f,e.currentPromptIndex,{status:"error"}),(u=f.sendTaskUpdate)==null||u.call(f,c)),chrome.runtime.sendMessage({action:"error",error:"Your quota has been depleted. Please upgrade to continue."});return}Et()})}async function yo(){var u,c,s,m,w,E;const e=f.getState();if(!e.isCurrentPromptProcessed)return;(u=v==null?void 0:v.stopTileScanner)==null||u.call(v);const t=e.currentPromptIndex+1,n=e.taskList.length>0?e.taskList.length:e.prompts.length;if(f.setState({currentPromptIndex:t}),Jt(),(c=f.saveStateToStorage)==null||c.call(f),!f.getState().isProcessing){(s=v==null?void 0:v.stopTileScanner)==null||s.call(v),(m=v==null?void 0:v.stopErrorMonitoring)==null||m.call(v),f.setState({isPausing:!1}),F.emit(p.OVERLAY_HIDE),chrome.runtime.sendMessage({action:"updateStatus",status:"Processing paused. Click Resume to continue."});return}const r=((w=e.settings)==null?void 0:w.autoClearCache)??!1,i=((E=e.settings)==null?void 0:E.autoClearCacheInterval)??50;if(r&&t>0&&t%i===0&&t<n){console.log(`🗑️ Auto-clear cache milestone: task ${t}/${n} — sending clearFlowCache (fire-and-forget)`),F.emit(p.OVERLAY_MESSAGE,`🧹 Clearing Flow cache (milestone: task ${t}/${n})...`),chrome.runtime.sendMessage({action:"updateStatus",status:`Task ${t} complete — clearing Flow cache for performance...`}),chrome.runtime.sendMessage({action:"clearFlowCache"},I=>{chrome.runtime.lastError});return}if(t>=n){console.log("✅ All tasks done — skipping inter-task countdown"),Qe();return}const a=f.getState(),l=a.taskList.length>0&&a.currentPromptIndex<a.taskList.length?a.taskList[a.currentPromptIndex]:null,d=f.getRandomDelay?f.getRandomDelay(l,a.settings):bo;F.emit(p.COUNTDOWN_START,{ms:d,label:"next prompt"}),Ie=setTimeout(()=>{Ie=null,f.getState().isProcessing&&Qe()},d)}function Zt(){var t,n,o;const e=f.getState();if(e.currentRetries<it){f.setState({currentRetries:e.currentRetries+1});const i=`Retry ${f.getState().currentRetries}/${it}: Waiting for Flow Labs interface...`;F.emit(p.OVERLAY_MESSAGE,i),chrome.runtime.sendMessage({action:"updateStatus",status:i}),setTimeout(Qe,fo)}else{F.emit(p.OVERLAY_HIDE);const r=(t=f.getCurrentTask)==null?void 0:t.call(f);r&&((n=f.updateTask)==null||n.call(f,e.currentPromptIndex,{status:"error"}),(o=f.sendTaskUpdate)==null||o.call(f,r)),chrome.runtime.sendMessage({action:"error",error:"Unable to find Flow Labs interface elements after multiple attempts. Make sure you are on the correct page."}),f.setState({isProcessing:!1})}}function Jt(){const e=f.getState(),t=Math.min(e.currentPromptIndex,e.prompts.length);(e.isProcessing||e.isPausing)&&F.emit(p.PROGRESS_UPDATE,{currentIndex:t}),chrome.runtime.sendMessage({action:"updateProgress",currentPrompt:t<e.prompts.length?e.prompts[t]:"",processed:t,total:e.prompts.length})}function wo({task:e}){e!=null&&e.queueTaskId&&chrome.runtime.sendMessage({action:"taskStatusUpdate",taskId:e.queueTaskId,status:"current"}).catch(()=>{})}function en({task:e,taskIndex:t}){var o,r,i,a;const n=f.getState();n.isCurrentPromptProcessed||(console.log(`✅ Queue: Task ${e==null?void 0:e.index} completed — moving to next`),e!=null&&e.queueTaskId&&chrome.runtime.sendMessage({action:"taskStatusUpdate",taskId:e.queueTaskId,status:"processed"}).catch(()=>{}),F.emit(p.OVERLAY_MESSAGE,`✅ All outputs captured for Task ${e==null?void 0:e.index}`),chrome.runtime.sendMessage({action:"updateStatus",status:`All outputs captured for prompt: "${(r=(o=n.prompts)==null?void 0:o[n.currentPromptIndex])==null?void 0:r.substring(0,30)}..."`}),f.setState({isCurrentPromptProcessed:!0,currentProcessingPrompt:null}),(i=v==null?void 0:v.stopTileScanner)==null||i.call(v),(a=v==null?void 0:v.stopErrorMonitoring)==null||a.call(v),setTimeout(()=>{const l=f.getState();(l.isProcessing||l.isPausing)&&yo()},1e3))}function xo({task:e,taskIndex:t}){e!=null&&e.queueTaskId&&chrome.runtime.sendMessage({action:"taskStatusUpdate",taskId:e.queueTaskId,status:"processed"}).catch(()=>{}),en({task:e,taskIndex:t})}function Eo({task:e,taskIndex:t,reason:n}){console.warn(`⚠️ Queue: Task ${e==null?void 0:e.index} error — reason: ${n}`),f.getState().currentRetries>=it-1&&(e!=null&&e.queueTaskId)&&chrome.runtime.sendMessage({action:"taskStatusUpdate",taskId:e.queueTaskId,status:"error"}).catch(()=>{}),Zt()}function xt(){var e;Ie!==null&&(clearTimeout(Ie),Ie=null,console.log("⏹️ QueueController: inter-task delay cancelled")),(e=f.clearCountdownTimer)==null||e.call(f)}function Et(){var n;const e=f.getState(),t=(n=f.getCurrentTask)==null?void 0:n.call(f);if(!t){console.error("❌ QueueController: No task at current index"),Zt();return}gt(t,e.currentPromptIndex)}console.log("✅ QueueController module loaded");let ft=null,tn=null,nn=null,St=null;function So(e,t){ft=e.getState,nn=e.setState,tn=e.clearCountdownTimer,St=e,t.on(p.OVERLAY_SHOW,n=>To(n)),t.on(p.OVERLAY_HIDE,()=>on()),t.on(p.OVERLAY_MESSAGE,n=>Xe(n)),t.on(p.OVERLAY_PAUSING,()=>Io()),t.on(p.OVERLAY_ERROR_BANNER,n=>Co(n)),t.on(p.OVERLAY_ERROR_BANNER_CLEAR,()=>rn()),t.on(p.COUNTDOWN_START,({ms:n,label:o})=>{St.startCountdown(n,o)}),t.on(p.PROGRESS_UPDATE,({currentIndex:n})=>{Xe(void 0,n)}),console.log("✅ OverlayManager module initialized")}function vo(){if(document.getElementById("labs-flow-overlay-styles"))return;const e=document.createElement("style");e.id="labs-flow-overlay-styles",e.textContent=`
+  `);
+		if (!response.success || response.result?.startsWith("error:")) {
+			const error = response.error || response.result?.replace("error:", "") || "Unknown error";
+			console.error("❌ Stealth submit failed:", error);
+			console.warn("⚠️ Falling back to DOM click for submit...");
+			return domClick();
+		}
+		console.log("✅ Stealth submit triggered via React onClick prop (zero DOM events)");
+		return true;
+	}
+	function domClick() {
+		const submitButton = Array.from(document.querySelectorAll("button")).find((button) => {
+			const hasArrowForward = button.querySelector("i")?.textContent.trim() === "arrow_forward";
+			const hasSpanText = (button.querySelector("span")?.textContent.trim().length || 0) > 0;
+			return hasArrowForward && hasSpanText;
+		});
+		if (!submitButton) {
+			console.warn("⚠️ Submit button not found");
+			return false;
+		}
+		submitButton.click();
+		console.log("✅ Submit button clicked (DOM)");
+		return true;
+	}
+	//#endregion
+	//#region src/content/clickHelper.js
+	function pointerClick(element) {
+		const { x, y } = centerOf(element);
+		const eventInit = {
+			bubbles: true,
+			cancelable: true,
+			pointerId: 1,
+			pointerType: "mouse",
+			isPrimary: true,
+			clientX: x,
+			clientY: y
+		};
+		element.dispatchEvent(new PointerEvent("pointerdown", eventInit));
+		element.dispatchEvent(new PointerEvent("pointerup", eventInit));
+	}
+	function mouseClick(element) {
+		const { x, y } = centerOf(element);
+		const eventInit = {
+			bubbles: true,
+			cancelable: true,
+			clientX: x,
+			clientY: y,
+			button: 0
+		};
+		element.dispatchEvent(new MouseEvent("mousedown", eventInit));
+		element.dispatchEvent(new MouseEvent("mouseup", eventInit));
+		element.dispatchEvent(new MouseEvent("click", eventInit));
+	}
+	function toggleTab(element) {
+		if (element.getAttribute("data-state") === "active") return false;
+		mouseClick(element);
+		return true;
+	}
+	function stealthClick(element) {
+		const rect = element.getBoundingClientRect();
+		const offsetX = (Math.random() - .5) * rect.width * .6;
+		const offsetY = (Math.random() - .5) * rect.height * .6;
+		const clientX = rect.left + rect.width / 2 + offsetX;
+		const clientY = rect.top + rect.height / 2 + offsetY;
+		console.log(`🎯 Stealth click at (${Math.round(clientX)}, ${Math.round(clientY)}) — offset (${Math.round(offsetX)}px, ${Math.round(offsetY)}px)`);
+		const eventInit = {
+			bubbles: true,
+			cancelable: true,
+			view: window,
+			clientX,
+			clientY,
+			screenX: window.screenX + clientX,
+			screenY: window.screenY + clientY,
+			button: 0
+		};
+		element.dispatchEvent(new PointerEvent("pointerdown", {
+			...eventInit,
+			isPrimary: true,
+			buttons: 1
+		}));
+		element.dispatchEvent(new MouseEvent("mousedown", {
+			...eventInit,
+			buttons: 1
+		}));
+		element.dispatchEvent(new PointerEvent("pointerup", {
+			...eventInit,
+			isPrimary: true,
+			buttons: 0
+		}));
+		element.dispatchEvent(new MouseEvent("mouseup", {
+			...eventInit,
+			buttons: 0
+		}));
+		element.dispatchEvent(new PointerEvent("click", {
+			...eventInit,
+			isPrimary: true
+		}));
+		element.dispatchEvent(new MouseEvent("click", eventInit));
+	}
+	//#endregion
+	//#region src/content/settingsApplicator.js
+	var getState$4 = null;
+	var setState$3 = null;
+	function init$5(getStateFn, setStateFn) {
+		getState$4 = getStateFn;
+		setState$3 = setStateFn;
+	}
+	function isProcessingStopped$2() {
+		const state = getState$4?.() || {};
+		return !state.isProcessing && !state.isPausing;
+	}
+	function settingsAreEqual(a, b) {
+		if (!a || !b) return false;
+		return a.count === b.count && a.model === b.model && a.aspectRatio === b.aspectRatio && a.taskType === b.taskType && a.videoSubMode === b.videoSubMode;
+	}
+	async function applyUnifiedSettings(taskType = "createvideo", settings = {}) {
+		try {
+			const state = getState$4?.() || {};
+			if (!state.isProcessing && !state.isPausing) {
+				console.log("⏸️ Settings application cancelled — processing stopped");
+				return false;
+			}
+			const count = settings.count || "1";
+			const model = settings.model || "default";
+			const aspectRatio = settings.aspectRatio || "landscape";
+			const videoSubMode = settings.videoSubMode || "frames";
+			const isImageTask = taskType === "createimage";
+			const outputIcon = isImageTask ? "image" : "videocam";
+			const outputLabel = isImageTask ? "Image" : "Video";
+			const nextSettings = {
+				count,
+				model,
+				aspectRatio,
+				taskType,
+				videoSubMode
+			};
+			if (state.lastAppliedSettings && settingsAreEqual(nextSettings, state.lastAppliedSettings)) {
+				console.log("⏩ Settings unchanged from previous task — SKIPPING (~5s saved)");
+				return true;
+			}
+			console.log(`⚙️ Applying settings: type=${taskType}, count=${count}, model=${model}, ratio=${aspectRatio}, subMode=${isImageTask ? "n/a" : videoSubMode}`);
+			const panelTrigger = $("//button[@aria-haspopup='menu' and .//div[@data-type='button-overlay'] and text()[normalize-space() != '']]");
+			if (!panelTrigger) {
+				console.warn("⚠️ Main settings trigger button not found");
+				return false;
+			}
+			pointerClick(panelTrigger);
+			console.log("✅ Step 1: Opened main control panel");
+			await h(600);
+			if (!document.querySelector("[role=\"menu\"][data-state=\"open\"]")) {
+				console.warn("⚠️ Control panel menu did not open");
+				return false;
+			}
+			const outputTypeTab = $(`//button[@role='tab' and contains(@class,'flow_tab_slider_trigger') and .//i[normalize-space(text())='${outputIcon}']]`);
+			if (outputTypeTab) if (toggleTab(outputTypeTab)) {
+				console.log(`✅ Step 2: Selected output type: ${outputLabel}`);
+				await h(400);
+			} else console.log(`⏩ Step 2: Output type already: ${outputLabel}`);
+			else console.warn(`⚠️ Output type tab "${outputLabel}" not found`);
+			if (isProcessingStopped$2()) {
+				re();
+				return false;
+			}
+			if (isImageTask) console.log("⏩ Step 3: Skipped (image task — no sub-mode)");
+			else {
+				const subModeIcon = videoSubMode === "ingredients" ? "chrome_extension" : "crop_free";
+				const subModeLabel = videoSubMode === "ingredients" ? "Ingredients" : "Frames";
+				const subModeTab = $(`//button[@role='tab' and contains(@class,'flow_tab_slider_trigger') and .//i[normalize-space(text())='${subModeIcon}']]`);
+				if (subModeTab) if (toggleTab(subModeTab)) {
+					console.log(`✅ Step 3: Selected video sub-mode: ${subModeLabel}`);
+					await h(300);
+				} else console.log(`⏩ Step 3: Sub-mode already: ${subModeLabel}`);
+				else console.warn(`⚠️ Sub-mode tab "${subModeLabel}" not found`);
+			}
+			if (isProcessingStopped$2()) {
+				re();
+				return false;
+			}
+			const ratioIcon = aspectRatio === "portrait" ? "crop_9_16" : "crop_16_9";
+			const ratioLabel = aspectRatio === "portrait" ? "Portrait" : "Landscape";
+			const ratioTab = $(`//button[@role='tab' and contains(@class,'flow_tab_slider_trigger') and .//i[normalize-space(text())='${ratioIcon}']]`);
+			if (ratioTab) if (toggleTab(ratioTab)) {
+				console.log(`✅ Step 4: Selected aspect ratio: ${ratioLabel}`);
+				await h(300);
+			} else console.log(`⏩ Step 4: Aspect ratio already: ${ratioLabel}`);
+			else console.warn(`⚠️ Aspect ratio tab "${ratioLabel}" not found`);
+			if (isProcessingStopped$2()) {
+				re();
+				return false;
+			}
+			const countLabel = `x${count}`;
+			const countTab = $(`//button[@role='tab' and contains(@class,'flow_tab_slider_trigger') and normalize-space(text())='${countLabel}']`);
+			if (countTab) if (toggleTab(countTab)) {
+				console.log(`✅ Step 5: Selected count: ${countLabel}`);
+				await h(300);
+			} else console.log(`⏩ Step 5: Count already: ${countLabel}`);
+			else console.warn(`⚠️ Count tab "${countLabel}" not found`);
+			if (isProcessingStopped$2()) {
+				re();
+				return false;
+			}
+			const modelLabel = MODEL_DISPLAY_NAMES[model] || (isImageTask ? "Nano Banana Pro" : "Veo 3.1 - Fast");
+			const modelTrigger = $("//div[@role='menu' and @data-state='open']//button[@aria-haspopup='menu' and .//div[@data-type='button-overlay']]");
+			if (!modelTrigger) console.warn("⚠️ Model dropdown trigger not found inside control panel");
+			else {
+				pointerClick(modelTrigger);
+				console.log("✅ Step 6a: Opened model dropdown");
+				await h(500);
+				const modelOption = $(`//div[@role='menuitem']//button[.//span[contains(normalize-space(text()),'${modelLabel}')]]`);
+				if (modelOption) {
+					modelOption.click();
+					console.log(`✅ Step 6b: Selected model: ${modelLabel}`);
+					await h(400);
+				} else {
+					console.warn(`⚠️ Model option "${modelLabel}" not found`);
+					re();
+					await h(300);
+				}
+			}
+			re();
+			await h(600);
+			console.log("✅ Step 7: Control panel closed");
+			if (setState$3) {
+				setState$3({
+					lastAppliedSettings: nextSettings,
+					lastAppliedMode: taskType
+				});
+				console.log("💾 Settings cached for next task comparison");
+			}
+			return true;
+		} catch (error) {
+			console.error("❌ Error applying unified Flow settings:", error);
+			re();
+			return false;
+		}
+	}
+	//#endregion
+	//#region src/content/imageUploader.js
+	var getState$3 = null;
+	function init$4(getStateFn) {
+		getState$3 = getStateFn;
+	}
+	function isStealthMode() {
+		return getState$3?.().settings?.stealthMode === true;
+	}
+	function isProcessingStopped$1() {
+		const state = getState$3?.() || {};
+		return !state.isProcessing && !state.isPausing;
+	}
+	function randomizeDelay(delayMs) {
+		return Math.round(delayMs * (.7 + Math.random() * .6));
+	}
+	async function waitWithStealthFactor(delayMs) {
+		await h(isStealthMode() ? randomizeDelay(delayMs) : delayMs);
+	}
+	function clickElement(element) {
+		if (isStealthMode()) {
+			stealthClick(element);
+			return;
+		}
+		element.click();
+	}
+	async function setTextInputValue(inputElement, value) {
+		const valueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+		if (isStealthMode()) {
+			const thinkingPause = 100 + Math.random() * 300;
+			console.log(`🥷 Stealth: Input think pause ${Math.round(thinkingPause)}ms before setting "${value}"...`);
+			await h(thinkingPause);
+		}
+		inputElement.focus();
+		valueSetter.call(inputElement, value);
+		inputElement.dispatchEvent(new Event("input", { bubbles: true }));
+	}
+	async function clearExistingReferences() {
+		const buttons = document.querySelectorAll("button");
+		let clearButton = null;
+		for (const button of buttons) {
+			const icon = button.querySelector("i.google-symbols");
+			if (icon && icon.textContent.trim() === "close" && button.querySelector("span")) {
+				clearButton = button;
+				break;
+			}
+		}
+		if (!clearButton) {
+			console.log("✅ ImageUploader Pre-flight: No attached references found — input area is clean");
+			return false;
+		}
+		clickElement(clearButton);
+		console.log("🧹 ImageUploader Pre-flight: Clicked clear-references button — all attached references cleared");
+		await waitWithStealthFactor(300);
+		return true;
+	}
+	async function uploadAllImages(images) {
+		if (!images || images.length === 0) {
+			console.warn("⚠️ ImageUploader.uploadAllImages: No images provided");
+			return false;
+		}
+		console.log(`📤 ImageUploader Phase 1: Batch-checking ${images.length} file(s) in library (single picker session)...`);
+		const names = images.map((image, index) => image.name || `reference_${index + 1}.jpg`);
+		const existingFiles = await checkLibraryForFiles(names);
+		const totalUploadsNeeded = images.length - existingFiles.size;
+		let didUpload = false;
+		let uploadedCount = 0;
+		for (let index = 0; index < images.length; index += 1) {
+			if (isProcessingStopped$1()) {
+				console.log("⏸️ ImageUploader: Processing stopped during file injection");
+				return false;
+			}
+			const image = images[index];
+			const name = names[index];
+			const mimeType = image.mimeType || "image/jpeg";
+			if (existingFiles.has(name)) {
+				console.log(`⏩ ImageUploader Phase 1 [${index + 1}/${images.length}]: "${name}" already in library — skipping upload`);
+				continue;
+			}
+			console.log(`📤 ImageUploader Phase 1 [${index + 1}/${images.length}]: "${name}" not in library — uploading...`);
+			const fileInput = document.querySelector("input[type=\"file\"][accept*=\"image\"]");
+			if (!fileInput) {
+				console.warn(`⚠️ ImageUploader Phase 1: File input not found for "${name}"`);
+				return false;
+			}
+			const file = base64ToFile(image.data, name, mimeType);
+			if (!file) {
+				console.warn(`⚠️ ImageUploader Phase 1: Failed to convert "${name}" to File object`);
+				return false;
+			}
+			const dataTransfer = new DataTransfer();
+			dataTransfer.items.add(file);
+			fileInput.files = dataTransfer.files;
+			fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+			console.log(`✅ ImageUploader Phase 1 [${index + 1}/${images.length}]: "${name}" injected (${(file.size / 1024).toFixed(1)} KB)`);
+			didUpload = true;
+			uploadedCount += 1;
+			if (uploadedCount < totalUploadsNeeded) await waitWithStealthFactor(IMAGE_UPLOADER_DELAYS.UPLOAD_BETWEEN_FILES);
+		}
+		if (didUpload) {
+			console.log(`⏳ ImageUploader Phase 1 complete — waiting ${IMAGE_UPLOADER_DELAYS.UPLOAD_SETTLE / 1e3}s for uploads to settle...`);
+			await h(IMAGE_UPLOADER_DELAYS.UPLOAD_SETTLE);
+		} else console.log("⏩ ImageUploader Phase 1 complete — all images already in library, no settle wait needed");
+		return true;
+	}
+	async function attachAllImages(images, mode = "ingredients") {
+		if (!images || images.length === 0) {
+			console.warn("⚠️ ImageUploader.attachAllImages: No images provided");
+			return false;
+		}
+		console.log(`🔗 ImageUploader Phase 2: Attaching ${images.length} image(s) as references [${mode}]...`);
+		for (let index = 0; index < images.length; index += 1) {
+			if (isProcessingStopped$1()) {
+				console.log("⏸️ ImageUploader: Processing stopped during reference attachment");
+				return false;
+			}
+			const name = images[index].name || `reference_${index + 1}.jpg`;
+			console.log(`🔗 ImageUploader Phase 2 [${index + 1}/${images.length}]: Attaching "${name}" [${mode}${mode === "frames" ? `/${index === 0 ? "Start" : "End"}` : ""}]...`);
+			if (!await attachSingleImage(name, mode, index)) {
+				console.error(`❌ ImageUploader Phase 2: Failed to attach "${name}"`);
+				return false;
+			}
+			console.log(`✅ ImageUploader Phase 2 [${index + 1}/${images.length}]: "${name}" attached successfully`);
+		}
+		console.log(`✅ ImageUploader Phase 2 complete — all ${images.length} image(s) attached`);
+		return true;
+	}
+	async function attachSingleImage(name, mode, slotIndex) {
+		const triggerElement = getTriggerElement(mode, slotIndex);
+		if (!triggerElement) {
+			console.warn(`⚠️ ImageUploader: ${mode === "frames" ? `Frames ${slotIndex === 0 ? "Start" : "End"} frame div` : "add_2 button"} trigger not found`);
+			return false;
+		}
+		clickElement(triggerElement);
+		console.log(`✅ ImageUploader: Clicked trigger (${mode}${mode === "frames" ? `/${slotIndex === 0 ? "Start" : "End"}` : ""})`);
+		const dialog = await waitForElement("[role=\"dialog\"][data-state=\"open\"]", IMAGE_UPLOADER_TIMEOUTS.PICKER_OPEN);
+		if (!dialog) {
+			console.warn("⚠️ ImageUploader: Asset picker popover did not open");
+			return false;
+		}
+		console.log("✅ ImageUploader: Asset picker popover opened");
+		await waitWithStealthFactor(IMAGE_UPLOADER_DELAYS.SEARCH_SETTLE);
+		const searchInput = dialog.querySelector("input[type=\"text\"]");
+		if (!searchInput) {
+			console.warn("⚠️ ImageUploader: Search input not found in popover");
+			closePickerWithEscape();
+			return false;
+		}
+		await setTextInputValue(searchInput, name);
+		console.log(`🔍 ImageUploader: Searching for "${name}"${isStealthMode() ? " (stealth paste)" : ""}...`);
+		const searchResult = await waitForSearchResult(name, IMAGE_UPLOADER_TIMEOUTS.SEARCH_RESULT);
+		if (!searchResult) {
+			console.warn(`⚠️ ImageUploader: Search result for "${name}" not found (upload may not have completed yet)`);
+			closePickerWithEscape();
+			return false;
+		}
+		console.log(`✅ ImageUploader: Found search result for "${name}"`);
+		const resultRow = searchResult.parentElement;
+		if (!resultRow) {
+			console.warn("⚠️ ImageUploader: Result row parent not found");
+			closePickerWithEscape();
+			return false;
+		}
+		if (isStealthMode()) await h(150 + Math.random() * 200);
+		clickElement(resultRow);
+		console.log(`✅ ImageUploader: Clicked result row for "${name}"`);
+		if (await waitForPickerClose(IMAGE_UPLOADER_TIMEOUTS.PICKER_CLOSE)) console.log("✅ ImageUploader: Popover closed — image attached as reference");
+		else {
+			console.warn("⚠️ ImageUploader: Popover did not close after clicking result — forcing close");
+			closePickerWithEscape();
+			await waitWithStealthFactor(300);
+		}
+		await waitWithStealthFactor(IMAGE_UPLOADER_DELAYS.AFTER_ATTACH);
+		return true;
+	}
+	async function checkLibraryForFiles(names) {
+		const existingFiles = /* @__PURE__ */ new Set();
+		if (!names || names.length === 0) return existingFiles;
+		const libraryTrigger = $("//button[.//i[normalize-space(text())='add_2']]");
+		if (!libraryTrigger) {
+			console.warn("⚠️ ImageUploader library check: add_2 trigger not found — assuming all images need upload");
+			return existingFiles;
+		}
+		clickElement(libraryTrigger);
+		const dialog = await waitForElement("[role=\"dialog\"][data-state=\"open\"]", IMAGE_UPLOADER_TIMEOUTS.PICKER_OPEN);
+		if (!dialog) {
+			console.warn("⚠️ ImageUploader library check: Popover did not open — assuming all images need upload");
+			return existingFiles;
+		}
+		await waitWithStealthFactor(300);
+		const searchInput = dialog.querySelector("input[type=\"text\"]");
+		if (!searchInput) {
+			console.warn("⚠️ ImageUploader library check: Search input not found — closing picker");
+			closePickerWithEscape();
+			return existingFiles;
+		}
+		for (let index = 0; index < names.length; index += 1) {
+			const name = names[index];
+			await setTextInputValue(searchInput, name);
+			console.log(`🔍 ImageUploader library check [${index + 1}/${names.length}]: Searching for "${name}"...`);
+			await waitWithStealthFactor(300);
+			if (await waitForSearchResult(name, IMAGE_UPLOADER_TIMEOUTS.LIBRARY_SEARCH)) {
+				console.log(`✅ ImageUploader library check [${index + 1}/${names.length}]: "${name}" found in library`);
+				existingFiles.add(name);
+			} else console.log(`📭 ImageUploader library check [${index + 1}/${names.length}]: "${name}" not in library — will upload`);
+			if (index < names.length - 1) await waitWithStealthFactor(200);
+		}
+		closePickerWithEscape();
+		await waitWithStealthFactor(400);
+		console.log(`📊 ImageUploader library check complete: ${existingFiles.size}/${names.length} already in library`);
+		return existingFiles;
+	}
+	async function waitForSearchResult(name, timeoutMs) {
+		const start = Date.now();
+		while (Date.now() - start < timeoutMs) {
+			const result = [...document.querySelectorAll("[data-testid=\"virtuoso-item-list\"] img")].find((image) => image.getAttribute("alt") === name);
+			if (result) return result;
+			await h(IMAGE_UPLOADER_DELAYS.SEARCH_POLL);
+		}
+		return null;
+	}
+	async function waitForPickerClose(timeoutMs) {
+		const start = Date.now();
+		while (Date.now() - start < timeoutMs) {
+			if (!document.querySelector("[role=\"dialog\"][data-state=\"open\"]")) return true;
+			await h(200);
+		}
+		return false;
+	}
+	function closePickerWithEscape() {
+		re();
+	}
+	function base64ToFile(data, name, mimeType) {
+		try {
+			let content = data;
+			let effectiveMimeType = mimeType;
+			if (data.startsWith("data:")) {
+				const [prefix, payload] = data.split(",");
+				content = payload;
+				const mimeMatch = prefix.match(/:(.*?);/);
+				if (mimeMatch) effectiveMimeType = mimeMatch[1];
+			}
+			const binary = atob(content);
+			const bytes = new Uint8Array(binary.length);
+			for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+			return new File([bytes], name, { type: effectiveMimeType });
+		} catch (error) {
+			console.error("❌ ImageUploader: base64ToFile conversion failed:", error);
+			return null;
+		}
+	}
+	function getTriggerElement(mode, slotIndex) {
+		if (mode === "frames") return $(`//div[@aria-haspopup='dialog' and normalize-space(text())='${slotIndex === 0 ? "Start" : "End"}']`);
+		return $("//button[.//i[normalize-space(text())='add_2']]");
+	}
+	//#endregion
+	//#region src/content/errorScanner.js
+	function hasCompletedMedia$1(tileElement) {
+		return Boolean(tileElement.querySelector("video[src*=\"media.getMediaUrlRedirect\"]") || tileElement.querySelector("img[src*=\"media.getMediaUrlRedirect\"]"));
+	}
+	function hasIcon(element, iconText) {
+		return [...element.querySelectorAll("i")].some((icon) => icon.textContent.trim() === iconText);
+	}
+	var TILE_ERROR_PATTERNS = [
+		{
+			type: "POLICY_VIOLATION",
+			label: "Prompt flagged by content policy",
+			detect(tileElement) {
+				if (!hasIcon(tileElement, "warning")) return false;
+				return [...tileElement.querySelectorAll("a[href]")].some((link) => {
+					const href = link.getAttribute("href") || "";
+					return href.includes("/faq") || href.includes("/policies") || href.includes("policy");
+				});
+			}
+		},
+		{
+			type: "DAILY_LIMIT_MODEL_FALLBACK",
+			label: "Daily generation limit reached — switching to Imagen 4",
+			detect(tileElement) {
+				if (!hasIcon(tileElement, "warning") || !hasIcon(tileElement, "refresh")) return false;
+				return tileElement.textContent.includes("Nano Banana");
+			}
+		},
+		{
+			type: "GENERATION_FAILED",
+			label: "Generation failed — Flow encountered an error",
+			detect(tileElement) {
+				if (!hasIcon(tileElement, "warning")) return false;
+				return hasIcon(tileElement, "refresh");
+			}
+		}
+	];
+	var GLOBAL_ERROR_PATTERNS = [];
+	function scanTileErrors(preSubmitIds, processedTileIds) {
+		const errors = [];
+		document.querySelectorAll("[data-tile-id]").forEach((tileElement) => {
+			const tileId = tileElement.getAttribute("data-tile-id");
+			if (!tileId) return;
+			if (preSubmitIds?.has(tileId) || processedTileIds?.has(tileId) || hasCompletedMedia$1(tileElement)) return;
+			for (const pattern of TILE_ERROR_PATTERNS) {
+				if (!pattern.detect(tileElement)) continue;
+				processedTileIds?.add(tileId);
+				errors.push({
+					tileId,
+					type: pattern.type,
+					label: pattern.label
+				});
+				console.warn(`⚠️ ErrorScanner: tile ${tileId} — ${pattern.label}`);
+				break;
+			}
+		});
+		return {
+			errorCount: errors.length,
+			errors
+		};
+	}
+	function checkGlobalErrors() {
+		for (const pattern of GLOBAL_ERROR_PATTERNS) {
+			if (!pattern.detect()) continue;
+			console.error(`❌ ErrorScanner: global error — ${pattern.label} (severity: ${pattern.severity})`);
+			return {
+				found: true,
+				type: pattern.type,
+				label: pattern.label,
+				severity: pattern.severity
+			};
+		}
+		return {
+			found: false,
+			type: null,
+			label: null,
+			severity: null
+		};
+	}
+	//#endregion
+	//#region src/content/monitoring.js
+	var monitoring_exports = /* @__PURE__ */ __exportAll({
+		checkForErrorsAfterSubmit: () => checkForErrorsAfterSubmit,
+		checkForPromptPolicyError: () => checkForPromptPolicyError,
+		checkForQueueFull: () => checkForQueueFull,
+		downloadTileViaUI: () => downloadTileViaUI$1,
+		init: () => init$3,
+		isTileCompleted: () => isTileCompleted,
+		isTileVideo: () => isTileVideo,
+		periodicTileScanner: () => periodicTileScanner,
+		resetDownloadQueue: () => resetDownloadQueue,
+		scanForNewlyCompletedTiles: () => scanForNewlyCompletedTiles,
+		snapshotExistingTileIds: () => snapshotExistingTileIds,
+		startErrorMonitoring: () => startErrorMonitoring,
+		startTileScanner: () => startTileScanner,
+		stopErrorMonitoring: () => stopErrorMonitoring,
+		stopTileScanner: () => stopTileScanner
+	});
+	var getState$2 = null;
+	var setState$2 = null;
+	var getSelectors = null;
+	var eventBus$2 = null;
+	var stateManager$3 = null;
+	var tileScannerInterval = null;
+	var errorMonitoringInterval = null;
+	var downloadQueue = [];
+	var isDownloadRunnerActive = false;
+	function init$3({ getState: getStateFn, setState: setStateFn, getSelectors: getSelectorsFn, eventBus: eventBusInstance, stateManager: stateManagerInstance }) {
+		getState$2 = getStateFn;
+		setState$2 = setStateFn;
+		getSelectors = getSelectorsFn;
+		eventBus$2 = eventBusInstance;
+		stateManager$3 = stateManagerInstance;
+		eventBus$2.on(EVENTS.PROCESSING_TERMINATE, () => {
+			stopTileScanner();
+			stopErrorMonitoring();
+			resetDownloadQueue();
+		});
+	}
+	function snapshotExistingTileIds() {
+		const tileIds = /* @__PURE__ */ new Set();
+		document.querySelectorAll("[data-tile-id]").forEach((tileElement) => {
+			const tileId = tileElement.getAttribute("data-tile-id");
+			if (tileId) tileIds.add(tileId);
+		});
+		console.log(`📸 Tile snapshot: ${tileIds.size} existing tile(s)`);
+		return tileIds;
+	}
+	function isTileCompleted(tileElement) {
+		return Boolean(tileElement.querySelector("video[src*=\"media.getMediaUrlRedirect\"]") || tileElement.querySelector("img[src*=\"media.getMediaUrlRedirect\"]"));
+	}
+	function isTileVideo(tileElement) {
+		return Boolean(tileElement.querySelector("video"));
+	}
+	function scanForNewlyCompletedTiles(preSubmitIds) {
+		const completedTiles = [];
+		const seenTileIds = /* @__PURE__ */ new Set();
+		document.querySelectorAll("[data-tile-id]").forEach((tileElement) => {
+			const tileId = tileElement.getAttribute("data-tile-id");
+			if (!tileId || seenTileIds.has(tileId)) return;
+			seenTileIds.add(tileId);
+			if (preSubmitIds?.has(tileId) || !isTileCompleted(tileElement)) return;
+			completedTiles.push({
+				tileId,
+				tileEl: tileElement,
+				isVideo: isTileVideo(tileElement)
+			});
+		});
+		return completedTiles;
+	}
+	function pickDownloadQualityButton(menuElement, targetQuality) {
+		const buttons = [...menuElement.querySelectorAll("button[role=\"menuitem\"], button")];
+		if (buttons.length === 0) return null;
+		const buttonData = buttons.map((button) => ({
+			button,
+			label: button.querySelectorAll("span")[0]?.textContent.trim() || button.textContent.trim(),
+			enabled: button.getAttribute("aria-disabled") !== "true"
+		}));
+		const enabledButtons = buttonData.filter((entry) => entry.enabled);
+		if (targetQuality) {
+			const matchingButton = buttonData.find((entry) => entry.label === targetQuality);
+			if (matchingButton) {
+				if (matchingButton.enabled) {
+					console.log(`⬇️ Download quality: "${matchingButton.label}" (selected)`);
+					return matchingButton.button;
+				}
+				console.warn(`⚠️ "${targetQuality}" is locked (aria-disabled). Falling back to best available.`);
+			} else console.warn(`⚠️ Quality "${targetQuality}" not found in sub-menu. Falling back.`);
+		}
+		if (enabledButtons.length > 0) {
+			const fallbackButton = enabledButtons[enabledButtons.length - 1];
+			console.log(`⬇️ Download quality fallback: "${fallbackButton.label}" (best available)`);
+			return fallbackButton.button;
+		}
+		console.warn("⚠️ All quality options disabled — clicking first button as last resort");
+		return buttons[0] || null;
+	}
+	async function downloadTileViaUI$1(tileElement, targetQuality = null) {
+		try {
+			const mediaElement = tileElement.querySelector("video[src*=\"media.getMediaUrlRedirect\"]") || tileElement.querySelector("img[src*=\"media.getMediaUrlRedirect\"]");
+			if (!mediaElement) {
+				console.warn("⚠️ No media element found in tile for download");
+				return false;
+			}
+			const rect = mediaElement.getBoundingClientRect();
+			const clientX = rect.left + rect.width / 2;
+			const clientY = rect.top + rect.height / 2;
+			mediaElement.dispatchEvent(new MouseEvent("mouseenter", {
+				bubbles: true,
+				clientX,
+				clientY
+			}));
+			mediaElement.dispatchEvent(new MouseEvent("mousemove", {
+				bubbles: true,
+				clientX,
+				clientY
+			}));
+			await h(400);
+			mediaElement.dispatchEvent(new MouseEvent("contextmenu", {
+				bubbles: true,
+				cancelable: true,
+				clientX,
+				clientY,
+				button: 2
+			}));
+			await h(600);
+			const contextMenu = document.querySelector("[data-radix-menu-content][data-state=\"open\"]");
+			if (!contextMenu) {
+				console.warn("⚠️ Context menu did not open for tile download");
+				return false;
+			}
+			const downloadMenuItem = [...contextMenu.querySelectorAll("[role=\"menuitem\"]")].find((item) => item.querySelector("i")?.textContent.trim() === "download");
+			if (!downloadMenuItem) {
+				console.warn("⚠️ Download menuitem not found in context menu");
+				document.body.dispatchEvent(new KeyboardEvent("keydown", {
+					key: "Escape",
+					bubbles: true
+				}));
+				return false;
+			}
+			downloadMenuItem.click();
+			await h(600);
+			const menus = [...document.querySelectorAll("[data-radix-menu-content][data-state=\"open\"]")];
+			const qualityMenu = menus.find((menu) => menu !== contextMenu) || menus[menus.length - 1];
+			if (!qualityMenu || qualityMenu === contextMenu) {
+				console.warn("⚠️ Quality sub-menu did not open");
+				document.body.dispatchEvent(new KeyboardEvent("keydown", {
+					key: "Escape",
+					bubbles: true
+				}));
+				return false;
+			}
+			const qualityButton = pickDownloadQualityButton(qualityMenu, targetQuality);
+			if (!qualityButton) {
+				console.warn("⚠️ No quality button found in sub-menu");
+				document.body.dispatchEvent(new KeyboardEvent("keydown", {
+					key: "Escape",
+					bubbles: true
+				}));
+				return false;
+			}
+			qualityButton.click();
+			await h(300);
+			console.log("✅ Download triggered via UI");
+			return true;
+		} catch (error) {
+			console.error("❌ Error in downloadTileViaUI:", error);
+			document.body.dispatchEvent(new KeyboardEvent("keydown", {
+				key: "Escape",
+				bubbles: true
+			}));
+			return false;
+		}
+	}
+	async function runDownloadQueue() {
+		if (isDownloadRunnerActive) return;
+		isDownloadRunnerActive = true;
+		while (downloadQueue.length > 0) {
+			const { tileEl, targetQuality, label } = downloadQueue.shift();
+			console.log(`⬇️ Download runner: processing "${label}" (quality: ${targetQuality ?? "default"})`);
+			await downloadTileViaUI$1(tileEl, targetQuality);
+			await h(500);
+		}
+		resetDownloadQueue();
+		console.log("✅ Download runner: queue empty, state reset");
+	}
+	async function periodicTileScanner() {
+		const state = getState$2?.() || {};
+		if (!state.isProcessing && !state.isPausing) return;
+		try {
+			const currentTask = state.taskList?.find((task) => task.status === "current");
+			if (!currentTask) return;
+			currentTask.foundVideos || (currentTask.foundVideos = 0);
+			currentTask.processedTileIds || (currentTask.processedTileIds = /* @__PURE__ */ new Set());
+			if (!currentTask._scanStartedAt) {
+				currentTask._scanStartedAt = Date.now();
+				eventBus$2?.emit(EVENTS.OVERLAY_ERROR_BANNER_CLEAR);
+			}
+			const isImageTask = currentTask.type === "createimage";
+			const stallTimeoutMs = isImageTask ? MONITORING_TIMEOUTS.IMAGE_STALL : MONITORING_TIMEOUTS.VIDEO_STALL;
+			const zeroTilesTimeoutMs = isImageTask ? MONITORING_TIMEOUTS.IMAGE_ZERO_TILES : MONITORING_TIMEOUTS.VIDEO_ZERO_TILES;
+			const preSubmitIds = state.preSubmitTileIds || /* @__PURE__ */ new Set();
+			const completedTiles = scanForNewlyCompletedTiles(preSubmitIds);
+			let foundNewItems = false;
+			for (const { tileId, tileEl, isVideo } of completedTiles) {
+				if (currentTask.processedTileIds.has(tileId)) continue;
+				currentTask.processedTileIds.add(tileId);
+				currentTask.foundVideos += 1;
+				currentTask._lastFoundAt = Date.now();
+				foundNewItems = true;
+				const mediaLabel = isVideo ? "Video" : "Image";
+				console.log(`✅ New ${mediaLabel} detected: tile ${tileId} (${currentTask.foundVideos}/${currentTask.expectedVideos})`);
+				eventBus$2?.emit(EVENTS.OVERLAY_MESSAGE, `✅ ${mediaLabel} ${currentTask.foundVideos}/${currentTask.expectedVideos} for Task ${currentTask.index}`);
+				chrome.runtime.sendMessage({
+					action: "updateStatus",
+					status: `${mediaLabel} ${currentTask.foundVideos}/${currentTask.expectedVideos} captured for Task ${currentTask.index}`
+				});
+				if (state.settings?.autoDownload !== false) {
+					const qualityKey = isVideo ? "videoDownloadQuality" : "imageDownloadQuality";
+					const targetQuality = currentTask.settings?.[qualityKey] || state.settings?.[qualityKey] || (isVideo ? DOWNLOAD_QUALITY_DEFAULTS.video : DOWNLOAD_QUALITY_DEFAULTS.image);
+					downloadQueue.push({
+						tileEl,
+						targetQuality,
+						label: `${mediaLabel} ${tileId}`
+					});
+					runDownloadQueue();
+				}
+				stateManager$3?.sendTaskUpdate?.(currentTask);
+			}
+			const { errorCount, errors } = scanTileErrors(preSubmitIds, currentTask.processedTileIds);
+			if (errorCount > 0) {
+				if (errors.every((error) => error.type === "DAILY_LIMIT_MODEL_FALLBACK")) {
+					console.warn(`🍌 Task ${currentTask.index}: ALL tile errors are DAILY_LIMIT_MODEL_FALLBACK — triggering Imagen 4 fallback`);
+					stopTileScanner();
+					stopErrorMonitoring();
+					eventBus$2?.emit(EVENTS.OVERLAY_MESSAGE, `⚠️ Nano Banana Pro daily limit reached — switching to Imagen 4 and retrying Task ${currentTask.index}...`);
+					chrome.runtime.sendMessage({
+						action: "updateStatus",
+						status: `Task ${currentTask.index}: Nano Banana Pro limit hit — switching to Imagen 4`
+					});
+					eventBus$2?.emit(EVENTS.DAILY_LIMIT_FALLBACK, {
+						task: currentTask,
+						taskIndex: state.currentPromptIndex,
+						fallbackModel: "imagen4"
+					});
+					return;
+				}
+				currentTask.foundVideos += errorCount;
+				currentTask._lastFoundAt = Date.now();
+				foundNewItems = true;
+				for (const error of errors) console.warn(`⚠️ Tile error counted for task ${currentTask.index}: [${error.type}] ${error.label} (tile ${error.tileId})`);
+				const errorSummary = errors.reduce((summary, error) => {
+					summary[error.label] = (summary[error.label] || 0) + 1;
+					return summary;
+				}, {});
+				const lines = Object.entries(errorSummary).map(([label, count]) => `• ${count}× ${label}`);
+				eventBus$2?.emit(EVENTS.OVERLAY_ERROR_BANNER, {
+					lines,
+					taskIndex: currentTask.index
+				});
+				eventBus$2?.emit(EVENTS.OVERLAY_MESSAGE, `⚠️ ${errorCount} tile error(s) — ${currentTask.foundVideos}/${currentTask.expectedVideos} resolved`);
+				chrome.runtime.sendMessage({
+					action: "updateStatus",
+					status: `Task ${currentTask.index}: ${errorCount} error tile(s) — ${JSON.stringify(errorSummary)} — ${currentTask.foundVideos}/${currentTask.expectedVideos} resolved`
+				});
+				stateManager$3?.sendTaskUpdate?.(currentTask);
+			}
+			const globalError = checkGlobalErrors();
+			if (globalError.found) {
+				console.error(`❌ Global error: [${globalError.type}] ${globalError.label} (severity: ${globalError.severity})`);
+				eventBus$2?.emit(EVENTS.OVERLAY_MESSAGE, `❌ ${globalError.label}`);
+				if (globalError.severity === "skip_task" && currentTask.status === "current") {
+					currentTask.status = "error";
+					stateManager$3?.sendTaskUpdate?.(currentTask);
+					emitTaskCompleted(currentTask, state.currentPromptIndex);
+					return;
+				}
+				if (globalError.severity === "pause_processing") {
+					eventBus$2?.emit(EVENTS.PROCESSING_STOP);
+					return;
+				}
+				if (globalError.severity === "terminate") {
+					eventBus$2?.emit(EVENTS.PROCESSING_TERMINATE);
+					return;
+				}
+			}
+			const now = Date.now();
+			const remainingCount = currentTask.expectedVideos - currentTask.foundVideos;
+			const mediaType = isImageTask ? "image" : "video";
+			if (currentTask.foundVideos >= currentTask.expectedVideos && currentTask.status === "current") {
+				currentTask.status = "processed";
+				const outputLabel = currentTask.type === "createimage" ? "image(s)" : "video(s)";
+				console.log(`✅ Task ${currentTask.index} COMPLETE (${currentTask.foundVideos}/${currentTask.expectedVideos} ${outputLabel})`);
+				stateManager$3?.sendTaskUpdate?.(currentTask);
+				emitTaskCompleted(currentTask, state.currentPromptIndex);
+				return;
+			}
+			if (currentTask.foundVideos > 0 && currentTask._lastFoundAt && now - currentTask._lastFoundAt > stallTimeoutMs && currentTask.status === "current") {
+				currentTask.status = "processed";
+				console.warn(`⚠️ Task ${currentTask.index}: stall timeout — ${currentTask.foundVideos}/${currentTask.expectedVideos} ${mediaType}(s) (${remainingCount} failed)`);
+				eventBus$2?.emit(EVENTS.OVERLAY_MESSAGE, `⚠️ Task ${currentTask.index}: ${currentTask.foundVideos}/${currentTask.expectedVideos} ${mediaType}s — ${remainingCount} failed. Continuing...`);
+				chrome.runtime.sendMessage({
+					action: "updateStatus",
+					status: `Task ${currentTask.index}: partial (${currentTask.foundVideos}/${currentTask.expectedVideos} ${mediaType}s). Moving on.`
+				});
+				stateManager$3?.sendTaskUpdate?.(currentTask);
+				emitTaskCompleted(currentTask, state.currentPromptIndex);
+				return;
+			}
+			if (currentTask.foundVideos === 0 && currentTask._scanStartedAt && now - currentTask._scanStartedAt > zeroTilesTimeoutMs && currentTask.status === "current") {
+				currentTask.status = "error";
+				const minutes = (zeroTilesTimeoutMs / 6e4).toFixed(1);
+				console.error(`❌ Task ${currentTask.index}: zero ${mediaType}s after ${minutes} min. All ${currentTask.expectedVideos} generations failed.`);
+				eventBus$2?.emit(EVENTS.OVERLAY_MESSAGE, `❌ Task ${currentTask.index}: no ${mediaType}s generated after ${minutes} min. Skipping...`);
+				chrome.runtime.sendMessage({
+					action: "updateStatus",
+					status: `Task ${currentTask.index}: all ${currentTask.expectedVideos} ${mediaType}(s) failed (${minutes}min). Skipping.`
+				});
+				stateManager$3?.sendTaskUpdate?.(currentTask);
+				emitTaskCompleted(currentTask, state.currentPromptIndex);
+				return;
+			}
+			if (currentTask.foundVideos > 0 && currentTask._lastFoundAt && !foundNewItems) {
+				const stalledSeconds = Math.round((now - currentTask._lastFoundAt) / 1e3);
+				const timeoutSeconds = Math.round((stallTimeoutMs - (now - currentTask._lastFoundAt)) / 1e3);
+				if (stalledSeconds > 0 && stalledSeconds % 30 < 5) console.log(`⏳ Task ${currentTask.index} [${mediaType}]: waiting for ${remainingCount} more — stalled ${stalledSeconds}s, timeout in ${timeoutSeconds}s`);
+			}
+		} catch (error) {
+			console.error("❌ Error in periodicTileScanner:", error);
+		}
+	}
+	function startTileScanner() {
+		stopTileScanner();
+		const state = getState$2?.() || {};
+		if (!state.isProcessing && !state.isPausing) return;
+		const intervalMs = state.scanIntervalMs || 5e3;
+		console.log(`🔍 Starting tile scanner (every ${intervalMs / 1e3}s)`);
+		tileScannerInterval = setInterval(periodicTileScanner, intervalMs);
+	}
+	function stopTileScanner() {
+		if (!tileScannerInterval) return;
+		clearInterval(tileScannerInterval);
+		tileScannerInterval = null;
+		console.log("🛑 Tile scanner stopped");
+	}
+	function checkForQueueFull() {
+		try {
+			const selectors = getSelectors?.() || {};
+			return Boolean($(selectors.QUEUE_FULL_POPUP_XPATH));
+		} catch (error) {
+			console.warn("⚠️ Error checking for queue full:", error);
+			return false;
+		}
+	}
+	function checkForPromptPolicyError() {
+		try {
+			const selectors = getSelectors?.() || {};
+			return Boolean($(selectors.PROMPT_POLICY_ERROR_POPUP_XPATH));
+		} catch (error) {
+			console.warn("⚠️ Error checking for policy error:", error);
+			return false;
+		}
+	}
+	async function checkForErrorsAfterSubmit() {
+		await h(2e3);
+		for (let index = 0; index < 10; index += 1) {
+			if (checkForQueueFull()) {
+				console.warn("⚠️ Queue is full!");
+				return "QUEUE_FULL";
+			}
+			if (checkForPromptPolicyError()) {
+				console.warn("⚠️ Prompt violates policy!");
+				return "POLICY_PROMPT";
+			}
+			await h(1e3);
+		}
+		return null;
+	}
+	function startErrorMonitoring() {
+		stopErrorMonitoring();
+		console.log("🔍 Starting error monitoring...");
+		errorMonitoringInterval = setInterval(async () => {
+			const state = getState$2?.() || {};
+			if (!state.isProcessing && !state.isPausing) {
+				stopErrorMonitoring();
+				return;
+			}
+			if (!checkForPromptPolicyError()) return;
+			console.error("❌ Policy error detected during generation!");
+			stopErrorMonitoring();
+			stopTileScanner();
+			const currentTask = state.taskList?.[state.currentPromptIndex];
+			if (currentTask) {
+				currentTask.status = "error";
+				stateManager$3?.sendTaskUpdate?.(currentTask);
+			}
+			eventBus$2?.emit(EVENTS.OVERLAY_MESSAGE, "⚠️ Policy violation detected. Skipping this prompt...");
+			chrome.runtime.sendMessage({
+				action: "updateStatus",
+				status: `Policy violation on prompt: "${state.prompts?.[state.currentPromptIndex]?.substring(0, 30)}..."`
+			});
+			setTimeout(() => {
+				if (!(getState$2?.() || {}).isProcessing) return;
+				setState$2?.({ isCurrentPromptProcessed: true });
+				if (currentTask) eventBus$2?.emit(EVENTS.TASK_COMPLETED, {
+					task: currentTask,
+					taskIndex: state.currentPromptIndex
+				});
+			}, 3e3);
+		}, 2e3);
+	}
+	function stopErrorMonitoring() {
+		if (!errorMonitoringInterval) return;
+		clearInterval(errorMonitoringInterval);
+		errorMonitoringInterval = null;
+		console.log("🛑 Error monitoring stopped");
+	}
+	function resetDownloadQueue() {
+		downloadQueue = [];
+		isDownloadRunnerActive = false;
+	}
+	function emitTaskCompleted(task, taskIndex) {
+		if (getState$2?.().isCurrentPromptProcessed) return;
+		stopTileScanner();
+		stopErrorMonitoring();
+		setTimeout(() => {
+			const state = getState$2?.() || {};
+			if (state.isProcessing || state.isPausing) eventBus$2?.emit(EVENTS.TASK_COMPLETED, {
+				task,
+				taskIndex
+			});
+		}, 500);
+	}
+	//#endregion
+	//#region src/content/taskRunner.js
+	var getState$1 = null;
+	var setState$1 = null;
+	var eventBus$1 = null;
+	var monitoring$1 = null;
+	var stateManager$2 = null;
+	function init$2({ getState: getStateFn, setState: setStateFn, eventBus: eventBusInstance, monitoring: monitoringModule, stateManager: stateManagerModule }) {
+		getState$1 = getStateFn;
+		setState$1 = setStateFn;
+		eventBus$1 = eventBusInstance;
+		monitoring$1 = monitoringModule;
+		stateManager$2 = stateManagerModule;
+		eventBus$1.on(EVENTS.DAILY_LIMIT_FALLBACK, ({ task, taskIndex, fallbackModel }) => {
+			console.warn(`🔄 DAILY_LIMIT_FALLBACK received — switching all tasks to model: ${fallbackModel}`);
+			const state = getState$1?.();
+			if (!state) return;
+			setState$1?.({ fallbackModel });
+			const patchedTasks = state.taskList.map((item) => {
+				if (item.status !== "pending" && item.status !== "current") return item;
+				return {
+					...item,
+					settings: {
+						...item.settings,
+						model: fallbackModel
+					},
+					processedTileIds: /* @__PURE__ */ new Set(),
+					foundVideos: 0,
+					_scanStartedAt: null,
+					_lastFoundAt: null,
+					status: item.index === task.index ? "pending" : item.status
+				};
+			});
+			setState$1?.({
+				taskList: patchedTasks,
+				lastAppliedSettings: null
+			});
+			console.log(`✅ Model patched to "${fallbackModel}" on ${patchedTasks.filter((item) => item.status === "pending" || item.status === "current").length} task(s)`);
+			setTimeout(() => {
+				const currentState = getState$1?.();
+				if (!currentState?.isProcessing && !currentState?.isPausing) return;
+				const currentTask = currentState.taskList.find((item) => item.index === task.index);
+				if (!currentTask) return;
+				console.log(`🔁 Re-running Task ${currentTask.index} with fallback model "${fallbackModel}"...`);
+				eventBus$1?.emit(EVENTS.OVERLAY_MESSAGE, `🔁 Retrying Task ${currentTask.index} with Imagen 4...`);
+				runTask(currentTask, taskIndex);
+			}, 2e3);
+		});
+	}
+	function isProcessingStopped() {
+		const state = getState$1?.() || {};
+		return !state.isProcessing && !state.isPausing;
+	}
+	async function runTask(task, taskIndex) {
+		if (!task) {
+			console.error("❌ TaskRunner: No task provided");
+			eventBus$1?.emit(EVENTS.TASK_ERROR, {
+				task: null,
+				reason: "no_task"
+			});
+			return;
+		}
+		let nextTask = task;
+		const prompt = nextTask.prompt;
+		const isImageTask = nextTask.type === "createimage";
+		const taskType = isImageTask ? "createimage" : "createvideo";
+		const mediaType = isImageTask ? "image" : "video";
+		setState$1?.({
+			currentProcessingPrompt: prompt,
+			currentTaskStartTime: Date.now()
+		});
+		const overlayMessage = `Processing ${taskType} task ${nextTask.index}: "${prompt?.substring(0, 30)}${prompt?.length > 30 ? "..." : ""}"`;
+		console.log(`📌 Task ${nextTask.index} started`);
+		eventBus$1?.emit(EVENTS.OVERLAY_MESSAGE, overlayMessage);
+		const fallbackModel = getState$1?.()?.fallbackModel;
+		if (fallbackModel && nextTask.settings?.model !== fallbackModel) {
+			console.log(`🔄 Applying fallback model override: ${nextTask.settings?.model ?? "default"} → ${fallbackModel}`);
+			nextTask = {
+				...nextTask,
+				settings: {
+					...nextTask.settings,
+					model: fallbackModel
+				}
+			};
+		}
+		console.log(`⚙️ Step 0/4: Applying settings for Task ${nextTask.index} (${taskType})...`);
+		eventBus$1?.emit(EVENTS.OVERLAY_MESSAGE, `Step 0/4: Applying settings for ${taskType}...`);
+		if (await applyUnifiedSettings(nextTask.type || "createvideo", nextTask.settings || {})) console.log(`✅ Settings applied: ${taskType}, ${nextTask.settings?.count || "1"} ${mediaType}(s), ${nextTask.settings?.model || "default"}, ${nextTask.settings?.aspectRatio || "landscape"}`);
+		else {
+			if (isProcessingStopped()) {
+				console.log("⏸️ Processing stopped during settings application");
+				return;
+			}
+			console.warn("⚠️ Failed to apply settings, continuing anyway...");
+		}
+		await h(500);
+		if (nextTask.referenceImages?.images?.length > 0) {
+			const mode = nextTask.referenceImages.mode || "ingredients";
+			const images = nextTask.referenceImages.images.filter(Boolean);
+			if (images.length > 0) {
+				console.log(`🧹 Step 1.5 pre-flight: Clearing any existing attached references for Task ${nextTask.index}...`);
+				eventBus$1?.emit(EVENTS.OVERLAY_MESSAGE, "Step 1.5/4: Clearing previous references...");
+				await clearExistingReferences();
+				console.log(`🖼️ Step 1.5a/4: Checking/uploading ${images.length} file(s) into Flow [${mode}] for Task ${nextTask.index}...`);
+				eventBus$1?.emit(EVENTS.OVERLAY_MESSAGE, `Step 1.5/4: Uploading ${images.length} reference image(s) to Flow library...`);
+				if (!await uploadAllImages(images)) {
+					if (isProcessingStopped()) {
+						console.log("⏸️ Processing stopped during file injection");
+						return;
+					}
+					console.error("❌ File injection failed — triggering retry");
+					eventBus$1?.emit(EVENTS.TASK_ERROR, {
+						task: nextTask,
+						taskIndex,
+						reason: "image_upload_failed"
+					});
+					return;
+				}
+				console.log(`🔗 Step 1.5b/4: Attaching ${images.length} image(s) as references [${mode}]...`);
+				eventBus$1?.emit(EVENTS.OVERLAY_MESSAGE, `Step 1.5/4: Attaching ${images.length} reference image(s)...`);
+				if (!await attachAllImages(images, mode)) {
+					if (isProcessingStopped()) {
+						console.log("⏸️ Processing stopped during reference attachment");
+						return;
+					}
+					console.error("❌ Reference attachment failed — triggering retry");
+					eventBus$1?.emit(EVENTS.TASK_ERROR, {
+						task: nextTask,
+						taskIndex,
+						reason: "image_attach_failed"
+					});
+					return;
+				}
+				console.log(`✅ All ${images.length} reference image(s) [${mode}] uploaded and attached`);
+				await h(500);
+			}
+		}
+		console.log(`📝 Step 2/4: Injecting prompt for Task ${nextTask.index}...`);
+		eventBus$1?.emit(EVENTS.OVERLAY_MESSAGE, "Step 2/4: Adding prompt...");
+		if (!await injectText(prompt)) {
+			console.error("❌ Text injection failed — triggering retry");
+			eventBus$1?.emit(EVENTS.TASK_ERROR, {
+				task: nextTask,
+				taskIndex,
+				reason: "inject_failed"
+			});
+			return;
+		}
+		await h(1e3);
+		stateManager$2?.updateTask?.(taskIndex, { status: "current" });
+		eventBus$1?.emit(EVENTS.TASK_START, {
+			task: stateManager$2?.getCurrentTask?.() ?? nextTask,
+			taskIndex
+		});
+		console.log(`📋 Task ${nextTask.index} status: current`);
+		console.log(`🚀 Step 3/4: Submitting Task ${nextTask.index}...`);
+		eventBus$1?.emit(EVENTS.OVERLAY_MESSAGE, "Step 3/4: Submitting...");
+		if (monitoring$1?.snapshotExistingTileIds) {
+			const preSubmitIds = monitoring$1.snapshotExistingTileIds();
+			setState$1?.({ preSubmitTileIds: preSubmitIds });
+			console.log(`📸 Pre-submit tile snapshot: ${preSubmitIds.size} existing tile(s)`);
+		}
+		if (!await clickSubmit()) {
+			console.error("❌ Submit failed — triggering retry");
+			eventBus$1?.emit(EVENTS.TASK_ERROR, {
+				task: nextTask,
+				taskIndex,
+				reason: "submit_failed"
+			});
+			return;
+		}
+		console.log(`✅ Submitted prompt: "${prompt}"`);
+		console.log("🔍 Step 4/4: Monitoring for completion...");
+		eventBus$1?.emit(EVENTS.OVERLAY_MESSAGE, isImageTask ? "Step 4/4: Monitoring image generation..." : "Step 4/4: Monitoring video generation...");
+		const errorAfterSubmit = monitoring$1?.checkForErrorsAfterSubmit ? await monitoring$1.checkForErrorsAfterSubmit() : null;
+		if (errorAfterSubmit === "QUEUE_FULL") {
+			console.warn("⚠️ Queue full — waiting 30 seconds before retry...");
+			eventBus$1?.emit(EVENTS.OVERLAY_MESSAGE, "Queue is full. Waiting 30 seconds before retry...");
+			await h(3e4);
+			runTask(nextTask, taskIndex);
+			return;
+		}
+		if (errorAfterSubmit === "POLICY_PROMPT") {
+			console.error("❌ Prompt violates policy — skipping");
+			eventBus$1?.emit(EVENTS.OVERLAY_MESSAGE, "⚠️ Policy violation detected. Skipping this prompt...");
+			stateManager$2?.updateTask?.(taskIndex, { status: "error" });
+			stateManager$2?.sendTaskUpdate?.(nextTask);
+			eventBus$1?.emit(EVENTS.TASK_SKIPPED, {
+				task: nextTask,
+				taskIndex,
+				reason: "policy_violation"
+			});
+			chrome.runtime.sendMessage({
+				action: "updateStatus",
+				status: `Policy violation on prompt: "${prompt?.substring(0, 30)}..."`
+			});
+			await h(3e3);
+			setState$1?.({ isCurrentPromptProcessed: true });
+			eventBus$1?.emit(EVENTS.TASK_COMPLETED, {
+				task: nextTask,
+				taskIndex
+			});
+			return;
+		}
+		console.log("✅ No errors detected, starting tile scanner...");
+		monitoring$1?.startTileScanner?.();
+		monitoring$1?.startErrorMonitoring?.();
+		const generationMessage = isImageTask ? "Generating images... scanning for images" : "Generating flow... scanning for videos";
+		console.log(`⏳ ${generationMessage}`);
+		eventBus$1?.emit(EVENTS.OVERLAY_MESSAGE, generationMessage);
+		setState$1?.({ currentRetries: 0 });
+	}
+	//#endregion
+	//#region src/content/queueController.js
+	var stateManager$1 = null;
+	var eventBus = null;
+	var monitoring = null;
+	var interTaskTimer = null;
+	function init$1({ stateManager: stateManagerModule, eventBus: eventBusInstance, monitoring: monitoringModule }) {
+		stateManager$1 = stateManagerModule;
+		eventBus = eventBusInstance;
+		monitoring = monitoringModule;
+		eventBus.on(EVENTS.QUEUE_NEXT, () => processNextTask());
+		eventBus.on(EVENTS.TASK_START, onTaskStart);
+		eventBus.on(EVENTS.TASK_COMPLETED, onTaskCompleted);
+		eventBus.on(EVENTS.TASK_SKIPPED, onTaskSkipped);
+		eventBus.on(EVENTS.TASK_ERROR, onTaskError);
+		eventBus.on(EVENTS.PROCESSING_STOP, cancelInterTaskDelay);
+		eventBus.on(EVENTS.PROCESSING_TERMINATE, cancelInterTaskDelay);
+	}
+	function processNextTask() {
+		const state = stateManager$1.getState();
+		stateManager$1.setState({ isCurrentPromptProcessed: false });
+		const totalTasks = state.taskList.length > 0 ? state.taskList.length : state.prompts.length;
+		if (!state.isProcessing || state.currentPromptIndex >= totalTasks) {
+			stateManager$1.setState({ isProcessing: false });
+			updateProgressBroadcast();
+			eventBus.emit(EVENTS.OVERLAY_HIDE);
+			if (state.currentPromptIndex >= totalTasks) {
+				chrome.runtime.sendMessage({
+					action: "updateStatus",
+					status: "All flow prompts completed successfully!"
+				});
+				chrome.runtime.sendMessage({ action: "resetPageZoom" }).catch(() => {});
+				stateManager$1.clearStateFromStorage?.();
+				eventBus.emit(EVENTS.PROCESSING_COMPLETE);
+			}
+			return;
+		}
+		const prompt = state.prompts[state.currentPromptIndex] || "";
+		const shortPrompt = prompt.length > 30 ? `${prompt.substring(0, 30)}...` : prompt;
+		eventBus.emit(EVENTS.OVERLAY_SHOW, `Processing Flow: "${shortPrompt}"`);
+		if (state.currentPromptIndex === 0) chrome.runtime.sendMessage({
+			action: "setPageZoom",
+			zoomFactor: FLOW_PAGE_ZOOM_FACTOR
+		}).catch(() => {});
+		chrome.storage.local.get("quotaStatus", (result) => {
+			const quotaStatus = result.quotaStatus || {
+				canContinue: true,
+				isPaid: false
+			};
+			if (quotaStatus.isPaid) {
+				runCurrentTask();
+				return;
+			}
+			if (!quotaStatus.canContinue) {
+				stateManager$1.setState({ isProcessing: false });
+				eventBus.emit(EVENTS.OVERLAY_HIDE);
+				const currentTask = stateManager$1.getCurrentTask?.();
+				if (currentTask) {
+					stateManager$1.updateTask?.(state.currentPromptIndex, { status: "error" });
+					stateManager$1.sendTaskUpdate?.(currentTask);
+				}
+				chrome.runtime.sendMessage({
+					action: "error",
+					error: "Your quota has been depleted. Please upgrade to continue."
+				});
+				return;
+			}
+			runCurrentTask();
+		});
+	}
+	async function onTaskCompleted({ task, taskIndex }) {
+		const state = stateManager$1.getState();
+		if (state.isCurrentPromptProcessed) return;
+		console.log(`✅ Queue: Task ${task?.index} completed — moving to next`);
+		if (task?.queueTaskId) chrome.runtime.sendMessage({
+			action: "taskStatusUpdate",
+			taskId: task.queueTaskId,
+			status: "processed"
+		}).catch(() => {});
+		eventBus.emit(EVENTS.OVERLAY_MESSAGE, `✅ All outputs captured for Task ${task?.index}`);
+		chrome.runtime.sendMessage({
+			action: "updateStatus",
+			status: `All outputs captured for prompt: "${state.prompts?.[state.currentPromptIndex]?.substring(0, 30)}..."`
+		});
+		stateManager$1.setState({
+			isCurrentPromptProcessed: true,
+			currentProcessingPrompt: null
+		});
+		monitoring?.stopTileScanner?.();
+		monitoring?.stopErrorMonitoring?.();
+		setTimeout(() => {
+			const nextState = stateManager$1.getState();
+			if (nextState.isProcessing || nextState.isPausing) advanceAfterTaskCompletion();
+		}, 1e3);
+	}
+	function onTaskSkipped({ task, taskIndex }) {
+		if (task?.queueTaskId) chrome.runtime.sendMessage({
+			action: "taskStatusUpdate",
+			taskId: task.queueTaskId,
+			status: "processed"
+		}).catch(() => {});
+		onTaskCompleted({
+			task,
+			taskIndex
+		});
+	}
+	function onTaskError({ task, taskIndex, reason }) {
+		console.warn(`⚠️ Queue: Task ${task?.index} error — reason: ${reason}`);
+		if (stateManager$1.getState().currentRetries >= 2 && task?.queueTaskId) chrome.runtime.sendMessage({
+			action: "taskStatusUpdate",
+			taskId: task.queueTaskId,
+			status: "error"
+		}).catch(() => {});
+		retryOrFail();
+	}
+	function onTaskStart({ task }) {
+		if (!task?.queueTaskId) return;
+		chrome.runtime.sendMessage({
+			action: "taskStatusUpdate",
+			taskId: task.queueTaskId,
+			status: "current"
+		}).catch(() => {});
+	}
+	function retryOrFail() {
+		const state = stateManager$1.getState();
+		if (state.currentRetries < 3) {
+			stateManager$1.setState({ currentRetries: state.currentRetries + 1 });
+			const message = `Retry ${stateManager$1.getState().currentRetries}/3: Waiting for Flow Labs interface...`;
+			eventBus.emit(EVENTS.OVERLAY_MESSAGE, message);
+			chrome.runtime.sendMessage({
+				action: "updateStatus",
+				status: message
+			});
+			setTimeout(processNextTask, RETRY_DELAY_MS);
+			return;
+		}
+		eventBus.emit(EVENTS.OVERLAY_HIDE);
+		const currentTask = stateManager$1.getCurrentTask?.();
+		if (currentTask) {
+			stateManager$1.updateTask?.(state.currentPromptIndex, { status: "error" });
+			stateManager$1.sendTaskUpdate?.(currentTask);
+		}
+		chrome.runtime.sendMessage({
+			action: "error",
+			error: "Unable to find Flow Labs interface elements after multiple attempts. Make sure you are on the correct page."
+		});
+		stateManager$1.setState({ isProcessing: false });
+	}
+	function cancelInterTaskDelay() {
+		if (interTaskTimer !== null) {
+			clearTimeout(interTaskTimer);
+			interTaskTimer = null;
+			console.log("⏹️ QueueController: inter-task delay cancelled");
+		}
+		stateManager$1.clearCountdownTimer?.();
+	}
+	function updateProgressBroadcast() {
+		const state = stateManager$1.getState();
+		const processed = Math.min(state.currentPromptIndex, state.prompts.length);
+		if (state.isProcessing || state.isPausing) eventBus.emit(EVENTS.PROGRESS_UPDATE, { currentIndex: processed });
+		chrome.runtime.sendMessage({
+			action: "updateProgress",
+			currentPrompt: processed < state.prompts.length ? state.prompts[processed] : "",
+			processed,
+			total: state.prompts.length
+		});
+	}
+	function runCurrentTask() {
+		const state = stateManager$1.getState();
+		const currentTask = stateManager$1.getCurrentTask?.();
+		if (!currentTask) {
+			console.error("❌ QueueController: No task at current index");
+			retryOrFail();
+			return;
+		}
+		runTask(currentTask, state.currentPromptIndex);
+	}
+	async function advanceAfterTaskCompletion() {
+		const state = stateManager$1.getState();
+		if (!state.isCurrentPromptProcessed) return;
+		monitoring?.stopTileScanner?.();
+		const nextIndex = state.currentPromptIndex + 1;
+		const totalTasks = state.taskList.length > 0 ? state.taskList.length : state.prompts.length;
+		stateManager$1.setState({ currentPromptIndex: nextIndex });
+		updateProgressBroadcast();
+		stateManager$1.saveStateToStorage?.();
+		if (!stateManager$1.getState().isProcessing) {
+			monitoring?.stopTileScanner?.();
+			monitoring?.stopErrorMonitoring?.();
+			stateManager$1.setState({ isPausing: false });
+			eventBus.emit(EVENTS.OVERLAY_HIDE);
+			chrome.runtime.sendMessage({
+				action: "updateStatus",
+				status: "Processing paused. Click Resume to continue."
+			});
+			return;
+		}
+		const autoClearCache = state.settings?.autoClearCache ?? false;
+		const autoClearCacheInterval = state.settings?.autoClearCacheInterval ?? 50;
+		if (autoClearCache && nextIndex > 0 && nextIndex % autoClearCacheInterval === 0 && nextIndex < totalTasks) {
+			console.log(`🗑️ Auto-clear cache milestone: task ${nextIndex}/${totalTasks} — sending clearFlowCache (fire-and-forget)`);
+			eventBus.emit(EVENTS.OVERLAY_MESSAGE, `🧹 Clearing Flow cache (milestone: task ${nextIndex}/${totalTasks})...`);
+			chrome.runtime.sendMessage({
+				action: "updateStatus",
+				status: `Task ${nextIndex} complete — clearing Flow cache for performance...`
+			});
+			chrome.runtime.sendMessage({ action: "clearFlowCache" }, () => {
+				if (chrome.runtime.lastError) {}
+			});
+			return;
+		}
+		if (nextIndex >= totalTasks) {
+			console.log("✅ All tasks done — skipping inter-task countdown");
+			processNextTask();
+			return;
+		}
+		const nextState = stateManager$1.getState();
+		const nextTask = nextState.taskList.length > 0 && nextState.currentPromptIndex < nextState.taskList.length ? nextState.taskList[nextState.currentPromptIndex] : null;
+		const delayMs = stateManager$1.getRandomDelay ? stateManager$1.getRandomDelay(nextTask, nextState.settings) : INTER_TASK_DELAY_FALLBACK_MS;
+		eventBus.emit(EVENTS.COUNTDOWN_START, {
+			ms: delayMs,
+			label: "next prompt"
+		});
+		interTaskTimer = setTimeout(() => {
+			interTaskTimer = null;
+			if (stateManager$1.getState().isProcessing) processNextTask();
+		}, delayMs);
+	}
+	//#endregion
+	//#region src/content/overlayManager.js
+	var getState = null;
+	var setState = null;
+	var clearCountdownTimer = null;
+	var stateManager = null;
+	function init(stateManagerModule, eventBus) {
+		getState = stateManagerModule.getState;
+		setState = stateManagerModule.setState;
+		clearCountdownTimer = stateManagerModule.clearCountdownTimer;
+		stateManager = stateManagerModule;
+		eventBus.on(EVENTS.OVERLAY_SHOW, (message) => showOverlay(message));
+		eventBus.on(EVENTS.OVERLAY_HIDE, () => hideOverlay());
+		eventBus.on(EVENTS.OVERLAY_MESSAGE, (message) => updateMessage(message));
+		eventBus.on(EVENTS.OVERLAY_PAUSING, () => showPausingState());
+		eventBus.on(EVENTS.OVERLAY_ERROR_BANNER, (payload) => showErrorBanner(payload));
+		eventBus.on(EVENTS.OVERLAY_ERROR_BANNER_CLEAR, () => clearErrorBanner());
+		eventBus.on(EVENTS.COUNTDOWN_START, ({ ms, label }) => {
+			stateManager.startCountdown(ms, label);
+		});
+		eventBus.on(EVENTS.PROGRESS_UPDATE, ({ currentIndex }) => {
+			updateMessage(void 0, currentIndex);
+		});
+	}
+	function injectOverlayStyles() {
+		if (document.getElementById("labs-flow-overlay-styles")) return;
+		const style = document.createElement("style");
+		style.id = "labs-flow-overlay-styles";
+		style.textContent = `
     @keyframes materialFadeIn {
       0% {
         opacity: 0;
@@ -106,15 +2385,35 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
       0%, 100% { opacity: 1; }
       50%       { opacity: 0.7; }
     }
-  `,document.head.appendChild(e)}function ko(){if(document.getElementById("pausing-spinner-style"))return;const e=document.createElement("style");e.id="pausing-spinner-style",e.textContent=`
+  `;
+		document.head.appendChild(style);
+	}
+	function injectPausingSpinnerStyles() {
+		if (document.getElementById("pausing-spinner-style")) return;
+		const style = document.createElement("style");
+		style.id = "pausing-spinner-style";
+		style.textContent = `
     @keyframes pausingSpinner {
       from { transform: rotate(0deg); }
       to   { transform: rotate(360deg); }
     }
+
     .pausing-spinner {
       animation: pausingSpinner 1s linear infinite;
     }
-  `,document.head.appendChild(e)}function To(e){if(document.getElementById("labs-flow-overlay")){Xe(e);return}vo();const t=ft(),n=document.createElement("div");n.id="labs-flow-overlay",n.style.cssText=`
+  `;
+		document.head.appendChild(style);
+	}
+	function showOverlay(message) {
+		if (document.getElementById("labs-flow-overlay")) {
+			updateMessage(message);
+			return;
+		}
+		injectOverlayStyles();
+		const state = getState();
+		const overlay = document.createElement("div");
+		overlay.id = "labs-flow-overlay";
+		overlay.style.cssText = `
     position: fixed;
     top: 0;
     left: 0;
@@ -128,7 +2427,10 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
     align-items: center;
     justify-content: center;
     font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
-  `;const o=document.createElement("div");o.id="labs-flow-message",o.style.cssText=`
+  `;
+		const card = document.createElement("div");
+		card.id = "labs-flow-message";
+		card.style.cssText = `
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
     backdrop-filter: blur(20px);
     padding: 32px;
@@ -143,7 +2445,9 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
     border: 1px solid rgba(186, 230, 253, 0.2);
     transform: scale(0.95);
     animation: materialFadeIn 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
-  `;const r=document.createElement("div");r.style.cssText=`
+  `;
+		const iconBox = document.createElement("div");
+		iconBox.style.cssText = `
     width: 80px;
     height: 80px;
     margin: 0 auto 24px auto;
@@ -155,62 +2459,97 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
     box-shadow: 0 8px 24px rgba(56, 189, 248, 0.35);
     position: relative;
     overflow: hidden;
-  `;const i=document.createElement("div");i.innerHTML=`
+  `;
+		const icon = document.createElement("div");
+		icon.innerHTML = `
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
       <path stroke-linecap="round" stroke-linejoin="round"
         d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0
            01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0
            00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
     </svg>
-  `,r.appendChild(i);const a=document.createElement("div");a.style.cssText=`
+  `;
+		iconBox.appendChild(icon);
+		const shimmer = document.createElement("div");
+		shimmer.style.cssText = `
     position: absolute;
     inset: 0;
     background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.2) 50%, transparent 70%);
     animation: iconShimmer 2s infinite;
-  `,r.appendChild(a);const l=document.createElement("h2");l.textContent="Flow Image Automation",l.style.cssText=`
+  `;
+		iconBox.appendChild(shimmer);
+		const title = document.createElement("h2");
+		title.textContent = "Flow Image Automation";
+		title.style.cssText = `
     font-size: 24px;
     font-weight: 600;
     margin: 0 0 8px 0;
     color: #1a1a1a;
     letter-spacing: -0.5px;
-  `;const d=document.createElement("p");d.id="labs-flow-message-text",d.textContent=e||"Processing...",d.style.cssText=`
+  `;
+		const messageText = document.createElement("p");
+		messageText.id = "labs-flow-message-text";
+		messageText.textContent = message || "Processing...";
+		messageText.style.cssText = `
     font-size: 16px;
     margin: 0 0 20px 0;
     color: #5f6368;
     line-height: 1.5;
     font-weight: 400;
     white-space: pre-line;
-  `;const u=document.createElement("div");u.id="labs-flow-progress",u.style.cssText=`
+  `;
+		const progress = document.createElement("div");
+		progress.id = "labs-flow-progress";
+		progress.style.cssText = `
     background: rgba(241, 245, 249, 0.8);
     border-radius: 12px;
     padding: 16px;
     margin: 20px 0;
     border: 1px solid rgba(148, 163, 184, 0.35);
-  `;const c=document.createElement("p");c.id="labs-flow-progress-text",c.textContent=`Image Prompt: ${t.currentPromptIndex+1}/${t.prompts.length}`,c.style.cssText=`
+  `;
+		const progressText = document.createElement("p");
+		progressText.id = "labs-flow-progress-text";
+		progressText.textContent = `Image Prompt: ${state.currentPromptIndex + 1}/${state.prompts.length}`;
+		progressText.style.cssText = `
     font-size: 14px;
     margin: 0 0 12px 0;
     color: #0c4a6e;
     font-weight: 600;
-  `;const s=document.createElement("div");s.style.cssText=`
+  `;
+		const progressTrack = document.createElement("div");
+		progressTrack.style.cssText = `
     width: 100%;
     height: 6px;
     background: rgba(148, 163, 184, 0.3);
     border-radius: 3px;
     overflow: hidden;
     position: relative;
-  `;const m=document.createElement("div");m.id="labs-flow-progress-fill",m.style.cssText=`
+  `;
+		const progressFill = document.createElement("div");
+		progressFill.id = "labs-flow-progress-fill";
+		progressFill.style.cssText = `
     height: 100%;
     background: linear-gradient(90deg, #38bdf8, #fbbf24);
     border-radius: 3px;
     width: 0%;
     animation: progressPulse 2s ease-in-out infinite;
     transition: width 0.3s ease;
-  `,s.appendChild(m),u.appendChild(c),u.appendChild(s);const w=document.createElement("div");w.id="labs-flow-button-container",w.style.cssText=`
+  `;
+		progressTrack.appendChild(progressFill);
+		progress.appendChild(progressText);
+		progress.appendChild(progressTrack);
+		const buttonContainer = document.createElement("div");
+		buttonContainer.id = "labs-flow-button-container";
+		buttonContainer.style.cssText = `
     display: flex;
     gap: 12px;
     margin-top: 24px;
     justify-content: center;
-  `;const E=document.createElement("button");E.id="labs-flow-pause-button",E.textContent="Pause",E.style.cssText=`
+  `;
+		const pauseButton = document.createElement("button");
+		pauseButton.id = "labs-flow-pause-button";
+		pauseButton.textContent = "Pause";
+		pauseButton.style.cssText = `
     background: linear-gradient(135deg, #ea580c, #f97316);
     border: none;
     color: white;
@@ -224,7 +2563,59 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
     font-family: inherit;
     position: relative;
     overflow: hidden;
-  `,E.addEventListener("mouseenter",()=>{E.style.transform="translateY(-2px)",E.style.boxShadow="0 6px 20px rgba(234, 88, 12, 0.35)"}),E.addEventListener("mouseleave",()=>{E.style.transform="translateY(0)",E.style.boxShadow="0 4px 12px rgba(234, 88, 12, 0.25)"}),E.addEventListener("click",()=>{chrome.runtime.sendMessage({action:"stopProcessingFromOverlay"})}),w.appendChild(E),o.appendChild(r),o.appendChild(l),o.appendChild(d),o.appendChild(u),o.appendChild(w),n.appendChild(o),document.body.appendChild(n);const I=(t.currentPromptIndex+1)/t.prompts.length*100;setTimeout(()=>{m.style.width=`${Math.min(I,100)}%`},100)}function Xe(e,t){const n=document.getElementById("labs-flow-message-text"),o=document.getElementById("labs-flow-progress-text"),r=document.getElementById("labs-flow-progress-fill");if(n&&e&&(n.innerText=e),t!==void 0){const a=ft().prompts.length||1,l=Math.min((t+1)/a*100,100);o&&(progressText.textContent=`Image Prompt: ${t+1}/${a}`),r&&(r.style.width=`${l}%`)}}function on(){tn();const e=document.getElementById("labs-flow-overlay");e&&document.body.removeChild(e)}function Io(){if(!document.getElementById("labs-flow-overlay"))return;Xe("Pausing after current task completes...");const t=document.getElementById("labs-flow-button-container");if(!t||document.getElementById("labs-flow-pausing-button"))return;const n=document.getElementById("labs-flow-pause-button");n&&n.remove(),ko();const o=document.createElement("button");o.id="labs-flow-pausing-button",o.style.cssText=`
+  `;
+		pauseButton.addEventListener("mouseenter", () => {
+			pauseButton.style.transform = "translateY(-2px)";
+			pauseButton.style.boxShadow = "0 6px 20px rgba(234, 88, 12, 0.35)";
+		});
+		pauseButton.addEventListener("mouseleave", () => {
+			pauseButton.style.transform = "translateY(0)";
+			pauseButton.style.boxShadow = "0 4px 12px rgba(234, 88, 12, 0.25)";
+		});
+		pauseButton.addEventListener("click", () => {
+			chrome.runtime.sendMessage({ action: "stopProcessingFromOverlay" });
+		});
+		buttonContainer.appendChild(pauseButton);
+		card.appendChild(iconBox);
+		card.appendChild(title);
+		card.appendChild(messageText);
+		card.appendChild(progress);
+		card.appendChild(buttonContainer);
+		overlay.appendChild(card);
+		document.body.appendChild(overlay);
+		const progressPercent = (state.currentPromptIndex + 1) / state.prompts.length * 100;
+		setTimeout(() => {
+			progressFill.style.width = `${Math.min(progressPercent, 100)}%`;
+		}, 100);
+	}
+	function updateMessage(text, progressIndex) {
+		const messageText = document.getElementById("labs-flow-message-text");
+		const progressText = document.getElementById("labs-flow-progress-text");
+		const progressFill = document.getElementById("labs-flow-progress-fill");
+		if (messageText && text) messageText.innerText = text;
+		if (progressIndex !== void 0) {
+			const total = getState().prompts.length || 1;
+			const progressPercent = Math.min((progressIndex + 1) / total * 100, 100);
+			if (progressText) progressText.textContent = `Image Prompt: ${progressIndex + 1}/${total}`;
+			if (progressFill) progressFill.style.width = `${progressPercent}%`;
+		}
+	}
+	function hideOverlay() {
+		clearCountdownTimer?.();
+		const overlay = document.getElementById("labs-flow-overlay");
+		if (overlay) document.body.removeChild(overlay);
+	}
+	function showPausingState() {
+		if (!document.getElementById("labs-flow-overlay")) return;
+		updateMessage("Pausing after current task completes...");
+		const buttonContainer = document.getElementById("labs-flow-button-container");
+		if (!buttonContainer || document.getElementById("labs-flow-pausing-button")) return;
+		const pauseButton = document.getElementById("labs-flow-pause-button");
+		if (pauseButton) pauseButton.remove();
+		injectPausingSpinnerStyles();
+		const pausingButton = document.createElement("button");
+		pausingButton.id = "labs-flow-pausing-button";
+		pausingButton.style.cssText = `
     background: linear-gradient(135deg, #ea580c, #f97316);
     border: none;
     color: white;
@@ -238,13 +2629,16 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
     font-family: inherit;
     position: relative;
     overflow: hidden;
-  `;const r=document.createElement("div");r.style.cssText=`
+  `;
+		const pausingContent = document.createElement("div");
+		pausingContent.style.cssText = `
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     transition: opacity 0.2s;
-  `,r.innerHTML=`
+  `;
+		pausingContent.innerHTML = `
     <svg class="pausing-spinner" width="16" height="16" viewBox="0 0 24 24"
          fill="none" stroke="currentColor" stroke-width="2.5">
       <path stroke-linecap="round" stroke-linejoin="round"
@@ -252,7 +2646,9 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
            m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
     </svg>
     <span>Pausing...</span>
-  `;const i=document.createElement("div");i.style.cssText=`
+  `;
+		const terminateContent = document.createElement("div");
+		terminateContent.style.cssText = `
     position: absolute;
     inset: 0;
     display: flex;
@@ -261,19 +2657,65 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
     gap: 8px;
     opacity: 0;
     transition: opacity 0.2s;
-  `,i.innerHTML=`
+  `;
+		terminateContent.innerHTML = `
     <svg class="terminate-icon" width="16" height="16" viewBox="0 0 24 24"
          fill="none" stroke="currentColor" stroke-width="2.5"
          style="transition: transform 0.3s;">
       <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
     <span>Terminate Now</span>
-  `,o.appendChild(r),o.appendChild(i),o.addEventListener("mouseenter",()=>{o.style.background="linear-gradient(135deg, #b91c1c, #dc2626)",o.style.transform="translateY(-2px)",o.style.boxShadow="0 6px 20px rgba(220, 38, 38, 0.35)",r.style.opacity="0",i.style.opacity="1";const a=i.querySelector(".terminate-icon");a&&(a.style.transform="rotate(90deg)")}),o.addEventListener("mouseleave",()=>{o.style.background="linear-gradient(135deg, #ea580c, #f97316)",o.style.transform="translateY(0)",o.style.boxShadow="0 4px 12px rgba(234, 88, 12, 0.25)",r.style.opacity="1",i.style.opacity="0";const a=i.querySelector(".terminate-icon");a&&(a.style.transform="rotate(0deg)")}),o.addEventListener("click",()=>{chrome.runtime.sendMessage({action:"terminateProcessingFromOverlay"}),nn({isPausing:!1,isProcessing:!1}),on()}),t.appendChild(o)}function Po(){if(document.getElementById("labs-flow-banner-styles"))return;const e=document.createElement("style");e.id="labs-flow-banner-styles",e.textContent=`
+  `;
+		pausingButton.appendChild(pausingContent);
+		pausingButton.appendChild(terminateContent);
+		pausingButton.addEventListener("mouseenter", () => {
+			pausingButton.style.background = "linear-gradient(135deg, #b91c1c, #dc2626)";
+			pausingButton.style.transform = "translateY(-2px)";
+			pausingButton.style.boxShadow = "0 6px 20px rgba(220, 38, 38, 0.35)";
+			pausingContent.style.opacity = "0";
+			terminateContent.style.opacity = "1";
+			const terminateIcon = terminateContent.querySelector(".terminate-icon");
+			if (terminateIcon) terminateIcon.style.transform = "rotate(90deg)";
+		});
+		pausingButton.addEventListener("mouseleave", () => {
+			pausingButton.style.background = "linear-gradient(135deg, #ea580c, #f97316)";
+			pausingButton.style.transform = "translateY(0)";
+			pausingButton.style.boxShadow = "0 4px 12px rgba(234, 88, 12, 0.25)";
+			pausingContent.style.opacity = "1";
+			terminateContent.style.opacity = "0";
+			const terminateIcon = terminateContent.querySelector(".terminate-icon");
+			if (terminateIcon) terminateIcon.style.transform = "rotate(0deg)";
+		});
+		pausingButton.addEventListener("click", () => {
+			chrome.runtime.sendMessage({ action: "terminateProcessingFromOverlay" });
+			setState({
+				isPausing: false,
+				isProcessing: false
+			});
+			hideOverlay();
+		});
+		buttonContainer.appendChild(pausingButton);
+	}
+	function injectBannerStyles() {
+		if (document.getElementById("labs-flow-banner-styles")) return;
+		const style = document.createElement("style");
+		style.id = "labs-flow-banner-styles";
+		style.textContent = `
     @keyframes bannerSlideIn {
       0%   { opacity: 0; transform: translateY(-8px) scale(0.98); }
       100% { opacity: 1; transform: translateY(0)    scale(1);    }
     }
-  `,document.head.appendChild(e)}function Co({lines:e=[],taskIndex:t="?"}={}){const n=document.getElementById("labs-flow-message");if(!n)return;Po(),rn();const o=document.createElement("div");o.id="labs-flow-error-banner",o.style.cssText=`
+  `;
+		document.head.appendChild(style);
+	}
+	function showErrorBanner({ lines = [], taskIndex = "?" } = {}) {
+		const messageCard = document.getElementById("labs-flow-message");
+		if (!messageCard) return;
+		injectBannerStyles();
+		clearErrorBanner();
+		const banner = document.createElement("div");
+		banner.id = "labs-flow-error-banner";
+		banner.style.cssText = `
     background: linear-gradient(145deg, rgba(255, 237, 213, 0.92), rgba(254, 215, 170, 0.80));
     backdrop-filter: blur(12px);
     border: 1px solid rgba(234, 88, 12, 0.20);
@@ -283,16 +2725,20 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
     text-align: left;
     box-shadow:
       0 4px 12px rgba(234, 88, 12, 0.10),
-      0 1px 3px  rgba(234, 88, 12, 0.08),
+      0 1px 3px rgba(234, 88, 12, 0.08),
       inset 0 1px 0 rgba(255, 255, 255, 0.60);
     animation: bannerSlideIn 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
     font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
-  `;const r=document.createElement("div");r.style.cssText=`
+  `;
+		const header = document.createElement("div");
+		header.style.cssText = `
     display: flex;
     align-items: center;
     gap: 8px;
     margin-bottom: 10px;
-  `;const i=document.createElement("div");i.style.cssText=`
+  `;
+		const iconBox = document.createElement("div");
+		iconBox.style.cssText = `
     width: 28px;
     height: 28px;
     border-radius: 8px;
@@ -302,30 +2748,49 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
     justify-content: center;
     flex-shrink: 0;
     box-shadow: 0 2px 6px rgba(234, 88, 12, 0.30);
-  `,i.innerHTML=`
+  `;
+		iconBox.innerHTML = `
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
          stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
       <line x1="12" y1="9" x2="12" y2="13"/>
       <line x1="12" y1="17" x2="12.01" y2="17"/>
     </svg>
-  `;const a=document.createElement("div"),l=document.createElement("div");l.style.cssText=`
+  `;
+		const titleContainer = document.createElement("div");
+		const title = document.createElement("div");
+		title.style.cssText = `
     font-size: 13px;
     font-weight: 600;
     color: #9a3412;
     letter-spacing: -0.1px;
     line-height: 1.3;
-  `,l.textContent="Some generations couldn't complete";const d=document.createElement("div");if(d.style.cssText=`
+  `;
+		title.textContent = "Some generations couldn't complete";
+		const subtitle = document.createElement("div");
+		subtitle.style.cssText = `
     font-size: 11px;
     font-weight: 400;
     color: #c2410c;
     margin-top: 1px;
     line-height: 1.3;
-  `,d.textContent=`Task ${t} • Skipping failed items automatically`,a.appendChild(l),a.appendChild(d),r.appendChild(i),r.appendChild(a),o.appendChild(r),e.length>0){const s=document.createElement("div");s.style.cssText=`
+  `;
+		subtitle.textContent = `Task ${taskIndex} • Skipping failed items automatically`;
+		titleContainer.appendChild(title);
+		titleContainer.appendChild(subtitle);
+		header.appendChild(iconBox);
+		header.appendChild(titleContainer);
+		banner.appendChild(header);
+		if (lines.length > 0) {
+			const lineList = document.createElement("div");
+			lineList.style.cssText = `
       display: flex;
       flex-direction: column;
       gap: 5px;
-    `;for(const m of e){const w=document.createElement("div");w.style.cssText=`
+    `;
+			for (const line of lines) {
+				const row = document.createElement("div");
+				row.style.cssText = `
         display: flex;
         align-items: center;
         gap: 6px;
@@ -337,30 +2802,109 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
         color: #7c2d12;
         font-weight: 500;
         line-height: 1.4;
-      `;const E=document.createElement("span");E.style.cssText=`
+      `;
+				const bullet = document.createElement("span");
+				bullet.style.cssText = `
         width: 6px;
         height: 6px;
         border-radius: 50%;
         background: #ea580c;
         flex-shrink: 0;
-      `,w.appendChild(E);const I=document.createElement("span");I.textContent=m,w.appendChild(I),s.appendChild(w)}o.appendChild(s)}const u=document.createElement("div");u.style.cssText=`
+      `;
+				const text = document.createElement("span");
+				text.textContent = line;
+				row.appendChild(bullet);
+				row.appendChild(text);
+				lineList.appendChild(row);
+			}
+			banner.appendChild(lineList);
+		}
+		const footer = document.createElement("div");
+		footer.style.cssText = `
     font-size: 11px;
     color: #c2410c;
     margin-top: 10px;
     padding-top: 8px;
     border-top: 1px solid rgba(234, 88, 12, 0.12);
     line-height: 1.4;
-  `,u.textContent="Your other prompts will continue processing normally.",o.appendChild(u);const c=document.getElementById("labs-flow-progress");c?n.insertBefore(o,c):n.appendChild(o)}function rn(){const e=document.getElementById("labs-flow-error-banner");e&&e.remove()}console.log("✅ OverlayManager module loaded");let ne=!1,j=new Set,fe=null,We=null,an="1K",sn="720p",ce=!1,N=!1,ie=!1,Se=[],be=null;const Re="cdm-control-panel",at="cdm-styles",he="cdm-tile-overlay",se=e=>new Promise(t=>setTimeout(t,e));function Ao(e){const t=!!e.querySelector('video[src*="media.getMediaUrlRedirect"]'),n=!!e.querySelector('img[src*="media.getMediaUrlRedirect"]');return t||n}function ln(e){return!!e.querySelector("video")}function de(){const e=[],t=new Set;return document.querySelectorAll("[data-tile-id]").forEach(n=>{const o=n.getAttribute("data-tile-id");!o||t.has(o)||(t.add(o),Ao(n)&&e.push({tileId:o,tileEl:n,isVideo:ln(n)}))}),e}function Mo(){if(document.getElementById(at))return;const e=document.createElement("style");e.id=at,e.textContent=`
-    /* ── Tile checkbox overlay ──────────────────── */
-    /* isolation: isolate on the tile itself creates a self-contained stacking
-       context — all z-index values inside the tile are scoped within it, so
-       the selection ring never paints over sibling page elements (e.g. textarea) */
+  `;
+		footer.textContent = "Your other prompts will continue processing normally.";
+		banner.appendChild(footer);
+		const progress = document.getElementById("labs-flow-progress");
+		if (progress) messageCard.insertBefore(banner, progress);
+		else messageCard.appendChild(banner);
+	}
+	function clearErrorBanner() {
+		const banner = document.getElementById("labs-flow-error-banner");
+		if (banner) banner.remove();
+	}
+	//#endregion
+	//#region src/content/contentDownloadManager.js
+	var contentDownloadManager_exports = /* @__PURE__ */ __exportAll({
+		activate: () => activate,
+		deactivate: () => deactivate,
+		isActive: () => isActive,
+		toggle: () => toggle
+	});
+	var isActiveFlag = false;
+	var selectedTileIds = /* @__PURE__ */ new Set();
+	var tileObserver = null;
+	var observerRefreshTimer = null;
+	var imageQuality = "1K";
+	var videoQuality = "720p";
+	var isDownloadRunActive = false;
+	var isPaused = false;
+	var shouldStop = false;
+	var queuedTiles = [];
+	var themeListener = null;
+	var CONTROL_PANEL_ID = "cdm-control-panel";
+	var STYLE_ID = "cdm-styles";
+	var TILE_OVERLAY_CLASS = "cdm-tile-overlay";
+	var DRAG_BLOCKER_SELECTOR = [
+		"button",
+		"select",
+		"input",
+		"textarea",
+		"label",
+		"a",
+		"#cdm-resize-handle",
+		"[data-no-drag]"
+	].join(", ");
+	function hasCompletedMedia(tileElement) {
+		return Boolean(tileElement.querySelector("video[src*=\"media.getMediaUrlRedirect\"]") || tileElement.querySelector("img[src*=\"media.getMediaUrlRedirect\"]"));
+	}
+	function isVideoTile(tileElement) {
+		return Boolean(tileElement.querySelector("video"));
+	}
+	function getCompletedTiles() {
+		const tiles = [];
+		const seenTileIds = /* @__PURE__ */ new Set();
+		document.querySelectorAll("[data-tile-id]").forEach((tileElement) => {
+			const tileId = tileElement.getAttribute("data-tile-id");
+			if (!tileId || seenTileIds.has(tileId) || !hasCompletedMedia(tileElement)) return;
+			seenTileIds.add(tileId);
+			tiles.push({
+				tileId,
+				tileEl: tileElement,
+				isVideo: isVideoTile(tileElement)
+			});
+		});
+		return tiles;
+	}
+	function injectStyles() {
+		if (document.getElementById(STYLE_ID)) return;
+		const style = document.createElement("style");
+		style.id = STYLE_ID;
+		style.textContent = `
     [data-tile-id].cdm-isolated {
       isolation: isolate;
     }
     .cdm-tile-overlay {
       position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       z-index: 9999;
       pointer-events: none;
     }
@@ -370,18 +2914,24 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
     }
     .cdm-checkbox-wrap {
       position: absolute;
-      top: 8px; left: 8px;
-      width: 22px; height: 22px;
+      top: 8px;
+      left: 8px;
+      width: 22px;
+      height: 22px;
       z-index: 10001;
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .cdm-checkbox {
-      width: 18px; height: 18px;
+      width: 18px;
+      height: 18px;
       border-radius: 5px;
       border: 2px solid rgba(255,255,255,0.85);
       background: rgba(15,23,42,0.55);
       backdrop-filter: blur(4px);
-      appearance: none; -webkit-appearance: none;
+      appearance: none;
+      -webkit-appearance: none;
       cursor: pointer;
       transition: background 0.15s, border-color 0.15s, transform 0.1s;
       flex-shrink: 0;
@@ -394,12 +2944,16 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
       content: '';
       display: block;
       margin: 2px auto 0 auto;
-      width: 5px; height: 9px;
+      width: 5px;
+      height: 9px;
       border-right: 2px solid white;
       border-bottom: 2px solid white;
       transform: rotate(45deg);
     }
-    .cdm-checkbox:hover { transform: scale(1.1); border-color: #a5b4fc; }
+    .cdm-checkbox:hover {
+      transform: scale(1.1);
+      border-color: #a5b4fc;
+    }
     .cdm-tile-selected-ring {
       position: absolute;
       inset: 0;
@@ -410,7 +2964,8 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
     }
     .cdm-tile-badge {
       position: absolute;
-      top: 8px; right: 8px;
+      top: 8px;
+      right: 8px;
       background: rgba(15,23,42,0.70);
       backdrop-filter: blur(6px);
       border: 1px solid rgba(255,255,255,0.15);
@@ -423,11 +2978,9 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
       pointer-events: none;
       letter-spacing: 0.3px;
     }
-
-    /* ── Control panel ──────────────────────────── */
     @keyframes cdmPanelIn {
       0%   { opacity:0; transform: translateY(16px) scale(0.97); }
-      100% { opacity:1; transform: translateY(0)    scale(1); }
+      100% { opacity:1; transform: translateY(0) scale(1); }
     }
     #cdm-control-panel {
       position: fixed;
@@ -451,9 +3004,23 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
       gap: 10px;
       user-select: none;
       transition: background 0.25s, border-color 0.25s, box-shadow 0.25s, color 0.25s;
+      cursor: grab;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(99,102,241,0.45) rgba(255,255,255,0.04);
     }
-
-    /* ── DARK theme (default) ───────────────────── */
+    #cdm-control-panel button,
+    #cdm-control-panel select,
+    #cdm-control-panel input,
+    #cdm-control-panel label,
+    #cdm-control-panel a,
+    #cdm-resize-handle {
+      cursor: auto;
+    }
+    #cdm-control-panel button,
+    #cdm-control-panel select,
+    #cdm-control-panel input[type="checkbox"] {
+      cursor: pointer;
+    }
     #cdm-control-panel.cdm-dark {
       background: linear-gradient(145deg, rgba(15,23,42,0.97), rgba(30,41,59,0.95));
       backdrop-filter: blur(24px);
@@ -465,8 +3032,8 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
         inset 0 1px 0 rgba(255,255,255,0.07);
     }
     #cdm-control-panel.cdm-dark .cdm-panel-title { color: #e2e8f0; }
-    #cdm-control-panel.cdm-dark .cdm-stats       { color: #94a3b8; }
-    #cdm-control-panel.cdm-dark .cdm-stat-chip   {
+    #cdm-control-panel.cdm-dark .cdm-stats { color: #94a3b8; }
+    #cdm-control-panel.cdm-dark .cdm-stat-chip {
       background: rgba(255,255,255,0.06);
       border: 1px solid rgba(255,255,255,0.09);
       color: #cbd5e1;
@@ -492,11 +3059,11 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
       border: 1px solid rgba(255,255,255,0.12);
       color: #e2e8f0;
     }
-    #cdm-control-panel.cdm-dark .cdm-quality-select:hover { border-color: rgba(99,102,241,0.5); }
+    #cdm-control-panel.cdm-dark .cdm-quality-select:hover {
+      border-color: rgba(99,102,241,0.5);
+    }
     #cdm-control-panel.cdm-dark #cdm-progress-bar-track { background: rgba(255,255,255,0.08); }
-    #cdm-control-panel.cdm-dark #cdm-progress-label     { color: #94a3b8; }
-
-    /* ── LIGHT theme ──────────────────────────────── */
+    #cdm-control-panel.cdm-dark #cdm-progress-label { color: #94a3b8; }
     #cdm-control-panel.cdm-light {
       background: linear-gradient(145deg, rgba(239,246,255,0.97), rgba(219,234,254,0.95));
       backdrop-filter: blur(24px);
@@ -511,8 +3078,8 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
     #cdm-control-panel.cdm-light .cdm-panel-title-icon {
       background: linear-gradient(135deg, #6366f1, #8b5cf6);
     }
-    #cdm-control-panel.cdm-light .cdm-stats       { color: #475569; }
-    #cdm-control-panel.cdm-light .cdm-stat-chip   {
+    #cdm-control-panel.cdm-light .cdm-stats { color: #475569; }
+    #cdm-control-panel.cdm-light .cdm-stat-chip {
       background: rgba(99,102,241,0.08);
       border: 1px solid rgba(99,102,241,0.18);
       color: #334155;
@@ -538,9 +3105,11 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
       border: 1px solid rgba(99,102,241,0.20);
       color: #1e293b;
     }
-    #cdm-control-panel.cdm-light .cdm-quality-select:hover { border-color: rgba(99,102,241,0.45); }
+    #cdm-control-panel.cdm-light .cdm-quality-select:hover {
+      border-color: rgba(99,102,241,0.45);
+    }
     #cdm-control-panel.cdm-light #cdm-progress-bar-track { background: rgba(99,102,241,0.12); }
-    #cdm-control-panel.cdm-light #cdm-progress-label     { color: #475569; }
+    #cdm-control-panel.cdm-light #cdm-progress-label { color: #475569; }
     #cdm-control-panel.cdm-light #cdm-close-btn {
       background: rgba(239,68,68,0.10);
       border: 1px solid rgba(239,68,68,0.22);
@@ -550,29 +3119,17 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
       background: rgba(239,68,68,0.20);
       color: #b91c1c;
     }
-    /* Drag cursor anywhere on the panel except interactive elements */
-    #cdm-control-panel {
-      cursor: grab;
-    }
-    #cdm-control-panel button,
-    #cdm-control-panel select,
-    #cdm-control-panel input,
-    #cdm-control-panel label,
-    #cdm-control-panel a,
-    #cdm-resize-handle {
-      cursor: auto;
-    }
-    #cdm-control-panel button { cursor: pointer; }
-    #cdm-control-panel select { cursor: pointer; }
-    #cdm-control-panel input[type="checkbox"] { cursor: pointer; }
-    /* Resize handle — bottom-right corner */
     #cdm-resize-handle {
       position: absolute;
-      bottom: 0; right: 0;
-      width: 32px; height: 32px;
+      bottom: 0;
+      right: 0;
+      width: 32px;
+      height: 32px;
       cursor: nwse-resize;
       z-index: 10;
-      display: flex; align-items: flex-end; justify-content: flex-end;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
       padding: 6px;
       border-bottom-right-radius: 20px;
       background: linear-gradient(135deg, transparent 40%, rgba(99,102,241,0.18) 100%);
@@ -581,8 +3138,10 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
     #cdm-resize-handle::before {
       content: '';
       position: absolute;
-      bottom: 0; right: 0;
-      width: 0; height: 0;
+      bottom: 0;
+      right: 0;
+      width: 0;
+      height: 0;
       border-style: solid;
       border-width: 0 0 12px 12px;
       border-color: transparent transparent rgba(99,102,241,0.5) transparent;
@@ -605,14 +3164,11 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
       opacity: 1;
       transform: scale(1.2);
     }
-    /* During drag/resize — disable pointer events inside the page */
     body.cdm-dragging * { pointer-events: none !important; }
     body.cdm-dragging #cdm-control-panel { pointer-events: all !important; cursor: grabbing !important; }
     body.cdm-resizing { cursor: nwse-resize !important; }
     body.cdm-resizing * { pointer-events: none !important; }
     body.cdm-resizing #cdm-control-panel { pointer-events: all !important; }
-
-    /* ── Panel top row ─────────────────────────── */
     #cdm-control-panel .cdm-panel-top {
       display: flex;
       align-items: center;
@@ -621,128 +3177,166 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
       flex-shrink: 0;
     }
     #cdm-control-panel .cdm-panel-title {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 13px; font-weight: 700;
-      color: #e2e8f0; letter-spacing: -0.2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
     }
     #cdm-control-panel .cdm-panel-title-icon {
-      width: 26px; height: 26px; border-radius: 8px;
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
       background: linear-gradient(135deg, #6366f1, #8b5cf6);
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       flex-shrink: 0;
       box-shadow: 0 2px 8px rgba(99,102,241,0.4);
     }
     #cdm-close-btn {
-      width: 26px; height: 26px; border-radius: 8px;
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
       background: rgba(248,113,113,0.15);
       border: 1px solid rgba(248,113,113,0.25);
-      color: #fca5a5; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px; line-height: 1;
-      transition: background 0.15s, color 0.15s, border-color 0.15s; flex-shrink: 0;
+      color: #fca5a5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      line-height: 1;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      flex-shrink: 0;
     }
-    #cdm-close-btn:hover { background: rgba(248,113,113,0.30); color: #fecaca; }
-
-    /* ── Stats row ─────────────────────────────── */
+    #cdm-close-btn:hover {
+      background: rgba(248,113,113,0.30);
+      color: #fecaca;
+    }
     #cdm-control-panel .cdm-stats {
-      display: flex; align-items: center; gap: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       font-size: 11px;
       flex-wrap: wrap;
     }
     #cdm-control-panel .cdm-stat-chip {
-      border-radius: 6px; padding: 2px 8px;
-      font-size: 11px; font-weight: 600;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 600;
     }
-
-    /* ── Controls row ──────────────────────────── */
     #cdm-control-panel .cdm-controls {
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
-    /* Select / Deselect all button */
     .cdm-btn-secondary {
-      border-radius: 10px; padding: 6px 12px;
-      font-size: 11px; font-weight: 600;
-      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+      border-radius: 10px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      transition: all 0.15s;
+      white-space: nowrap;
       font-family: inherit;
     }
-
-    /* Quality selects */
     .cdm-quality-group {
-      display: flex; align-items: center; gap: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
     .cdm-quality-label {
-      font-size: 10px; font-weight: 600;
-      letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      white-space: nowrap;
     }
     .cdm-quality-select {
-      appearance: none; -webkit-appearance: none;
-      border-radius: 8px; padding: 5px 26px 5px 10px;
-      font-size: 11px; font-weight: 600;
-      cursor: pointer; font-family: inherit;
+      appearance: none;
+      -webkit-appearance: none;
+      border-radius: 8px;
+      padding: 5px 26px 5px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: inherit;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 8px center;
       transition: border-color 0.15s;
     }
-    .cdm-quality-select option { background: #1e293b; color: #e2e8f0; }
-
-    /* Download button */
+    .cdm-quality-select option {
+      background: #1e293b;
+      color: #e2e8f0;
+    }
     #cdm-download-btn {
       margin-left: auto;
-      display: flex; align-items: center; gap: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
       background: linear-gradient(135deg, #6366f1, #8b5cf6);
-      border: none; border-radius: 10px;
+      border: none;
+      border-radius: 10px;
       padding: 7px 16px;
-      font-size: 12px; font-weight: 700; color: white;
-      cursor: pointer; font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      color: white;
+      font-family: inherit;
       box-shadow: 0 4px 12px rgba(99,102,241,0.35);
-      transition: all 0.2s; white-space: nowrap;
+      transition: all 0.2s;
+      white-space: nowrap;
     }
     #cdm-download-btn:hover:not(:disabled) {
       transform: translateY(-1px);
       box-shadow: 0 6px 18px rgba(99,102,241,0.45);
     }
     #cdm-download-btn:active:not(:disabled) { transform: scale(0.97); }
-    #cdm-download-btn:disabled {
-      opacity: 0.5; cursor: not-allowed; transform: none;
-    }
-
-    /* ── Progress bar ──────────────────────────── */
+    #cdm-download-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     #cdm-progress-wrap {
       display: none;
-      flex-direction: column; gap: 6px;
+      flex-direction: column;
+      gap: 6px;
     }
     #cdm-progress-wrap.cdm-visible { display: flex; }
     #cdm-progress-label {
-      font-size: 11px; color: #94a3b8; font-weight: 500;
+      font-size: 11px;
+      font-weight: 500;
     }
     #cdm-progress-bar-track {
-      width: 100%; height: 4px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 2px; overflow: hidden;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      overflow: hidden;
     }
     #cdm-progress-bar-fill {
-      height: 100%; width: 0%;
+      height: 100%;
+      width: 0%;
       background: linear-gradient(90deg, #6366f1, #8b5cf6);
       border-radius: 2px;
       transition: width 0.3s ease;
     }
-    /* Pause / Stop controls row — visible only during download */
     #cdm-download-controls {
       display: none;
-      align-items: center; gap: 8px;
+      align-items: center;
+      gap: 8px;
     }
     #cdm-download-controls.cdm-visible { display: flex; }
-    /* Pause button — amber */
     #cdm-pause-btn {
-      display: flex; align-items: center; gap: 5px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
       background: rgba(245,158,11,0.15);
       border: 1px solid rgba(245,158,11,0.35);
       color: #fbbf24;
-      border-radius: 10px; padding: 5px 12px;
-      font-size: 11px; font-weight: 700;
-      cursor: pointer; font-family: inherit;
-      transition: all 0.15s; white-space: nowrap;
+      border-radius: 10px;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: inherit;
+      transition: all 0.15s;
+      white-space: nowrap;
     }
     #cdm-pause-btn:hover {
       background: rgba(245,158,11,0.28);
@@ -758,26 +3352,30 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
       background: rgba(99,102,241,0.30);
       color: #c7d2fe;
     }
-    /* Stop button — red */
     #cdm-stop-btn {
-      display: flex; align-items: center; gap: 5px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
       background: rgba(239,68,68,0.12);
       border: 1px solid rgba(239,68,68,0.30);
       color: #f87171;
-      border-radius: 10px; padding: 5px 12px;
-      font-size: 11px; font-weight: 700;
-      cursor: pointer; font-family: inherit;
-      transition: all 0.15s; white-space: nowrap;
+      border-radius: 10px;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: inherit;
+      transition: all 0.15s;
+      white-space: nowrap;
     }
     #cdm-stop-btn:hover {
       background: rgba(239,68,68,0.25);
       border-color: rgba(239,68,68,0.55);
       color: #fca5a5;
     }
-    /* Paused status label */
     #cdm-paused-badge {
       display: none;
-      font-size: 10px; font-weight: 700;
+      font-size: 10px;
+      font-weight: 700;
       color: #fbbf24;
       letter-spacing: 0.5px;
       text-transform: uppercase;
@@ -786,14 +3384,9 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
     #cdm-paused-badge.cdm-visible { display: inline; }
     @keyframes cdmPausedPulse {
       0%, 100% { opacity: 1; }
-      50%       { opacity: 0.4; }
+      50% { opacity: 0.4; }
     }
-
-    /* ── Custom scrollbar (shown when panel is resized smaller) ─── */
-    #cdm-control-panel::-webkit-scrollbar {
-      width: 5px;
-      height: 5px;
-    }
+    #cdm-control-panel::-webkit-scrollbar { width: 5px; height: 5px; }
     #cdm-control-panel::-webkit-scrollbar-track {
       background: rgba(255,255,255,0.04);
       border-radius: 10px;
@@ -806,30 +3399,28 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
     #cdm-control-panel::-webkit-scrollbar-thumb:hover {
       background: rgba(99,102,241,0.75);
     }
-    #cdm-control-panel::-webkit-scrollbar-corner {
-      background: transparent;
-    }
-    /* Firefox */
-    #cdm-control-panel {
-      scrollbar-width: thin;
-      scrollbar-color: rgba(99,102,241,0.45) rgba(255,255,255,0.04);
-    }
-
-    /* ── Spinner for download btn ──────────────── */
+    #cdm-control-panel::-webkit-scrollbar-corner { background: transparent; }
     @keyframes cdmSpin {
       from { transform: rotate(0deg); }
-      to   { transform: rotate(360deg); }
+      to { transform: rotate(360deg); }
     }
     .cdm-spinner {
-      width: 12px; height: 12px;
+      width: 12px;
+      height: 12px;
       border: 2px solid rgba(255,255,255,0.3);
       border-top-color: white;
       border-radius: 50%;
       animation: cdmSpin 0.7s linear infinite;
       flex-shrink: 0;
     }
-  `,document.head.appendChild(e)}function Lo(){if(document.getElementById(Re))return;const e=document.createElement("div");e.id=Re,e.innerHTML=`
-    <!-- Top row: title + close -->
+  `;
+		document.head.appendChild(style);
+	}
+	function createControlPanel() {
+		if (document.getElementById(CONTROL_PANEL_ID)) return;
+		const panel = document.createElement("div");
+		panel.id = CONTROL_PANEL_ID;
+		panel.innerHTML = `
     <div class="cdm-panel-top">
       <div class="cdm-panel-title">
         <div class="cdm-panel-title-icon">
@@ -841,20 +3432,15 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
       </div>
       <button id="cdm-close-btn" title="Close">✕</button>
     </div>
-
-    <!-- Stats row -->
     <div class="cdm-stats" id="cdm-stats">
       <span class="cdm-stat-chip" id="cdm-total-chip">0 tiles</span>
       <span class="cdm-stat-chip cdm-selected" id="cdm-selected-chip">0 selected</span>
     </div>
-
-    <!-- Controls row -->
     <div class="cdm-controls">
       <button class="cdm-btn-secondary" id="cdm-select-all-btn">Select All</button>
       <button class="cdm-btn-secondary" id="cdm-deselect-all-btn">Deselect All</button>
       <button class="cdm-btn-secondary" id="cdm-select-images-btn">Images Only</button>
       <button class="cdm-btn-secondary" id="cdm-select-videos-btn">Videos Only</button>
-
       <div class="cdm-quality-group">
         <span class="cdm-quality-label">🖼</span>
         <select class="cdm-quality-select" id="cdm-image-quality">
@@ -863,7 +3449,6 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
           <option value="4K">4K — Upscaled</option>
         </select>
       </div>
-
       <div class="cdm-quality-group">
         <span class="cdm-quality-label">🎬</span>
         <select class="cdm-quality-select" id="cdm-video-quality">
@@ -873,7 +3458,6 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
           <option value="4K">4K — Upscaled</option>
         </select>
       </div>
-
       <button id="cdm-download-btn" disabled>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
@@ -881,15 +3465,12 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
         <span id="cdm-download-label">Download (0)</span>
       </button>
     </div>
-
-    <!-- Progress bar (hidden until download starts) -->
     <div id="cdm-progress-wrap">
       <div style="display:flex;align-items:center;gap:8px;">
         <span id="cdm-progress-label" style="flex:1;">Downloading 0 / 0…</span>
         <span id="cdm-paused-badge">⏸ Paused</span>
       </div>
       <div id="cdm-progress-bar-track"><div id="cdm-progress-bar-fill"></div></div>
-      <!-- Pause / Stop controls — shown during active download -->
       <div id="cdm-download-controls">
         <button id="cdm-pause-btn">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
@@ -901,21 +3482,876 @@ XPath:`,e),null}}async function kt(e,t=5e3){const n=Date.now();for(;Date.now()-n
         </button>
       </div>
     </div>
-
-    <!-- Resize handle — bottom-right corner -->
     <div id="cdm-resize-handle" title="Drag to resize">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
-        <line x1="13" y1="1" x2="1"  y2="13"/>
-        <line x1="13" y1="6" x2="6"  y2="13"/>
+        <line x1="13" y1="1" x2="1" y2="13"/>
+        <line x1="13" y1="6" x2="6" y2="13"/>
         <line x1="13" y1="10" x2="10" y2="13"/>
       </svg>
     </div>
-  `,document.body.appendChild(e),Ro(),Oo(e),Do(e)}function Ro(){var e,t,n,o,r,i,a,l,d,u;(e=document.getElementById("cdm-close-btn"))==null||e.addEventListener("click",bt),(t=document.getElementById("cdm-select-all-btn"))==null||t.addEventListener("click",()=>{de().forEach(({tileId:c,tileEl:s})=>{Ne(c,s)}),te()}),(n=document.getElementById("cdm-deselect-all-btn"))==null||n.addEventListener("click",()=>{[...j].forEach(c=>{const s=document.querySelector(`[data-tile-id="${c}"]`);s&&je(c,s)}),j.clear(),te()}),(o=document.getElementById("cdm-select-images-btn"))==null||o.addEventListener("click",()=>{de().forEach(({tileId:c,tileEl:s,isVideo:m})=>{m?je(c,s):Ne(c,s)}),te()}),(r=document.getElementById("cdm-select-videos-btn"))==null||r.addEventListener("click",()=>{de().forEach(({tileId:c,tileEl:s,isVideo:m})=>{m?Ne(c,s):je(c,s)}),te()}),(i=document.getElementById("cdm-image-quality"))==null||i.addEventListener("change",c=>{an=c.target.value}),(a=document.getElementById("cdm-video-quality"))==null||a.addEventListener("change",c=>{sn=c.target.value}),(l=document.getElementById("cdm-download-btn"))==null||l.addEventListener("click",jo),(d=document.getElementById("cdm-pause-btn"))==null||d.addEventListener("click",dn),(u=document.getElementById("cdm-stop-btn"))==null||u.addEventListener("click",No)}const _o=["button","select","input","textarea","label","a","#cdm-resize-handle","[data-no-drag]"].join(", ");function Oo(e){let t,n,o,r;function i(l){const d=l.clientX-t,u=l.clientY-n;let c=o+d,s=r+u;c=Math.max(0,Math.min(window.innerWidth-e.offsetWidth,c)),s=Math.max(0,Math.min(window.innerHeight-e.offsetHeight,s)),e.style.left=c+"px",e.style.top=s+"px",e.style.bottom="auto",e.style.transform="none"}function a(){e.style.cursor="grab",document.body.classList.remove("cdm-dragging"),document.removeEventListener("mousemove",i),document.removeEventListener("mouseup",a)}e.addEventListener("mousedown",l=>{if(l.target.closest(_o))return;l.preventDefault();const d=e.getBoundingClientRect();o=d.left,r=d.top,t=l.clientX,n=l.clientY,e.style.left=o+"px",e.style.top=r+"px",e.style.bottom="auto",e.style.transform="none",e.style.cursor="grabbing",document.body.classList.add("cdm-dragging"),document.addEventListener("mousemove",i),document.addEventListener("mouseup",a)})}function Do(e){const t=e.querySelector("#cdm-resize-handle");if(!t)return;const n=360,o=120;let r,i,a,l,d,u;function c(m){const w=m.clientX-r,E=m.clientY-i,I=Math.max(n,Math.min(window.innerWidth-d,a+w)),Q=Math.max(o,Math.min(window.innerHeight-u,l+E));e.style.width=I+"px",e.style.height=Q+"px"}function s(){document.body.classList.remove("cdm-resizing"),document.removeEventListener("mousemove",c),document.removeEventListener("mouseup",s)}t.addEventListener("mousedown",m=>{m.preventDefault(),m.stopPropagation();const w=e.getBoundingClientRect();r=m.clientX,i=m.clientY,a=w.width,l=w.height,d=w.left,u=w.top,e.style.left=w.left+"px",e.style.top=w.top+"px",e.style.bottom="auto",e.style.transform="none",e.style.width=w.width+"px",e.style.height=w.height+"px",e.style.overflow="auto",document.body.classList.add("cdm-resizing"),document.addEventListener("mousemove",c),document.addEventListener("mouseup",s)})}function te(){const t=de().length,n=j.size,o=document.getElementById("cdm-total-chip"),r=document.getElementById("cdm-selected-chip"),i=document.getElementById("cdm-download-btn"),a=document.getElementById("cdm-download-label");o&&(o.textContent=`${t} tile${t!==1?"s":""}`),r&&(r.textContent=`${n} selected`),i&&(i.disabled=n===0||ce),a&&(a.textContent=ce?"Downloading…":`Download (${n})`)}function cn(e,t){const n=t.querySelector("."+he);if(n)return n;window.getComputedStyle(t).position==="static"&&(t.style.position="relative"),t.style.isolation="isolate",t.classList.add("cdm-isolated");const r=document.createElement("div");r.className=he+" cdm-active",r.setAttribute("data-cdm-tile",e);const i=document.createElement("div");i.className="cdm-checkbox-wrap";const a=document.createElement("input");a.type="checkbox",a.className="cdm-checkbox",a.setAttribute("data-tile-cb",e),a.checked=j.has(e),a.addEventListener("change",u=>{u.stopPropagation(),a.checked?Ne(e,t):je(e,t),te()}),r.addEventListener("click",u=>{u.target!==a&&(a.checked=!a.checked,a.dispatchEvent(new Event("change")))}),i.appendChild(a),r.appendChild(i);const l=ln(t),d=document.createElement("div");return d.className="cdm-tile-badge",d.textContent=l?"🎬 VIDEO":"🖼 IMAGE",r.appendChild(d),t.appendChild(r),r}function Ne(e,t){j.add(e);const n=t.querySelector(`[data-tile-cb="${e}"]`);n&&(n.checked=!0);let o=t.querySelector(".cdm-tile-selected-ring");if(!o){o=document.createElement("div"),o.className="cdm-tile-selected-ring";const r=t.querySelector("."+he);r&&r.appendChild(o)}}function je(e,t){j.delete(e);const n=t.querySelector(`[data-tile-cb="${e}"]`);n&&(n.checked=!1);const o=t.querySelector(".cdm-tile-selected-ring");o&&o.remove()}function Uo(){de().forEach(({tileId:e,tileEl:t})=>{cn(e,t)}),te()}function $o(){document.querySelectorAll("."+he).forEach(e=>e.remove()),document.querySelectorAll("[data-cdm-tile-pos]").forEach(e=>{e.style.position="",e.removeAttribute("data-cdm-tile-pos")})}function Vo(){return document.querySelector("[data-virtuoso-scroller]")||document.querySelector('[class*="tileGrid"], [class*="tile-grid"], [class*="TileGrid"]')||document.querySelector("main")||document.body}function qo(){var t;if(fe)return;fe=new MutationObserver(n=>{!ne||!n.some(r=>[...r.addedNodes].some(i=>{var a;return!(i.nodeType!==Node.ELEMENT_NODE||(a=i.classList)!=null&&a.contains(he)||i.id===Re||i.id===at)}))||(clearTimeout(We),We=setTimeout(()=>{ne&&(de().forEach(({tileId:r,tileEl:i})=>{i.querySelector("."+he)||cn(r,i)}),te())},200))});const e=Vo();fe.observe(e,{childList:!0,subtree:!0}),console.log("[CDM] Observer attached to",e.tagName,((t=e.className)==null?void 0:t.slice(0,60))||"")}function zo(){clearTimeout(We),We=null,fe&&(fe.disconnect(),fe=null)}function Fo(e,t){const n=[...e.querySelectorAll('button[role="menuitem"], button')];if(n.length===0)return null;const o=n.map(i=>{var u;const l=((u=i.querySelectorAll("span")[0])==null?void 0:u.textContent.trim())||i.textContent.trim(),d=i.getAttribute("aria-disabled")!=="true";return{btn:i,label:l,enabled:d}}),r=o.filter(i=>i.enabled);if(t){const i=o.find(a=>a.label===t);if(i&&i.enabled)return i.btn}return r.length>0?r[r.length-1].btn:n[0]||null}async function Yo(e,t){try{const n=e.querySelector('video[src*="media.getMediaUrlRedirect"]')||e.querySelector('img[src*="media.getMediaUrlRedirect"]');if(!n)return console.warn("[CDM] No media element in tile"),!1;const o=n.getBoundingClientRect(),r=o.left+o.width/2,i=o.top+o.height/2;n.dispatchEvent(new MouseEvent("mouseenter",{bubbles:!0,clientX:r,clientY:i})),n.dispatchEvent(new MouseEvent("mousemove",{bubbles:!0,clientX:r,clientY:i})),await se(400),n.dispatchEvent(new MouseEvent("contextmenu",{bubbles:!0,cancelable:!0,clientX:r,clientY:i,button:2})),await se(600);const a=document.querySelector('[data-radix-menu-content][data-state="open"]');if(!a)return console.warn("[CDM] Context menu did not open"),!1;const l=[...a.querySelectorAll('[role="menuitem"]')].find(s=>{var m;return((m=s.querySelector("i"))==null?void 0:m.textContent.trim())==="download"});if(!l)return console.warn("[CDM] Download menuitem not found"),document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:!0})),!1;l.click(),await se(600);const d=[...document.querySelectorAll('[data-radix-menu-content][data-state="open"]')],u=d.find(s=>s!==a)||d[d.length-1];if(!u||u===a)return console.warn("[CDM] Quality sub-menu did not open"),document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:!0})),!1;const c=Fo(u,t);return c?(c.click(),await se(300),!0):(console.warn("[CDM] No quality button in sub-menu"),document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:!0})),!1)}catch(n){return console.error("[CDM] downloadTileViaUI error:",n),document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:!0})),!1}}function dn(){N=!N;const e=document.getElementById("cdm-pause-btn"),t=document.getElementById("cdm-pause-label"),n=document.getElementById("cdm-paused-badge");e&&e.classList.toggle("cdm-paused",N),t&&(t.textContent=N?"Resume":"Pause");const o=e==null?void 0:e.querySelector("svg");o&&(o.innerHTML=N?'<polygon points="5,3 19,12 5,21" fill="currentColor"/>':'<rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/>'),n&&n.classList.toggle("cdm-visible",N);const r=document.getElementById("cdm-progress-label");r&&N?r.style.opacity="0.5":r&&(r.style.opacity="")}function No(){ce&&(ie=!0,N&&dn())}async function jo(){if(ce||j.size===0)return;ce=!0,N=!1,ie=!1,Se=de().filter(m=>j.has(m.tileId)).map(m=>({tileId:m.tileId,tileEl:m.tileEl,isVideo:m.isVideo,quality:m.isVideo?sn:an}));const t=Se.length;let n=0;const o=document.getElementById("cdm-progress-wrap"),r=document.getElementById("cdm-progress-label"),i=document.getElementById("cdm-progress-bar-fill"),a=document.getElementById("cdm-download-btn"),l=document.getElementById("cdm-download-controls"),d=document.getElementById("cdm-pause-btn"),u=document.getElementById("cdm-pause-label");o&&o.classList.add("cdm-visible"),r&&(r.textContent=`Downloading 0 / ${t}…`),i&&(i.style.width="0%"),l&&l.classList.add("cdm-visible"),d&&d.classList.remove("cdm-paused"),u&&(u.textContent="Pause"),a&&(a.disabled=!0,a.innerHTML=`
+  `;
+		document.body.appendChild(panel);
+		bindPanelEvents();
+		makePanelDraggable(panel);
+		makePanelResizable(panel);
+	}
+	function bindPanelEvents() {
+		document.getElementById("cdm-close-btn")?.addEventListener("click", deactivate);
+		document.getElementById("cdm-select-all-btn")?.addEventListener("click", () => {
+			getCompletedTiles().forEach(({ tileId, tileEl }) => selectTile(tileId, tileEl));
+			updateStats();
+		});
+		document.getElementById("cdm-deselect-all-btn")?.addEventListener("click", () => {
+			[...selectedTileIds].forEach((tileId) => {
+				const tileElement = document.querySelector(`[data-tile-id="${tileId}"]`);
+				if (tileElement) deselectTile(tileId, tileElement);
+			});
+			selectedTileIds.clear();
+			updateStats();
+		});
+		document.getElementById("cdm-select-images-btn")?.addEventListener("click", () => {
+			getCompletedTiles().forEach(({ tileId, tileEl, isVideo }) => {
+				if (isVideo) deselectTile(tileId, tileEl);
+				else selectTile(tileId, tileEl);
+			});
+			updateStats();
+		});
+		document.getElementById("cdm-select-videos-btn")?.addEventListener("click", () => {
+			getCompletedTiles().forEach(({ tileId, tileEl, isVideo }) => {
+				if (isVideo) selectTile(tileId, tileEl);
+				else deselectTile(tileId, tileEl);
+			});
+			updateStats();
+		});
+		document.getElementById("cdm-image-quality")?.addEventListener("change", (event) => {
+			imageQuality = event.target.value;
+		});
+		document.getElementById("cdm-video-quality")?.addEventListener("change", (event) => {
+			videoQuality = event.target.value;
+		});
+		document.getElementById("cdm-download-btn")?.addEventListener("click", startDownloadRun);
+		document.getElementById("cdm-pause-btn")?.addEventListener("click", togglePause);
+		document.getElementById("cdm-stop-btn")?.addEventListener("click", stopDownloadRun);
+	}
+	function makePanelDraggable(panel) {
+		let startX;
+		let startY;
+		let initialLeft;
+		let initialTop;
+		function onMouseMove(event) {
+			const deltaX = event.clientX - startX;
+			const deltaY = event.clientY - startY;
+			let left = initialLeft + deltaX;
+			let top = initialTop + deltaY;
+			left = Math.max(0, Math.min(window.innerWidth - panel.offsetWidth, left));
+			top = Math.max(0, Math.min(window.innerHeight - panel.offsetHeight, top));
+			panel.style.left = `${left}px`;
+			panel.style.top = `${top}px`;
+			panel.style.bottom = "auto";
+			panel.style.transform = "none";
+		}
+		function onMouseUp() {
+			panel.style.cursor = "grab";
+			document.body.classList.remove("cdm-dragging");
+			document.removeEventListener("mousemove", onMouseMove);
+			document.removeEventListener("mouseup", onMouseUp);
+		}
+		panel.addEventListener("mousedown", (event) => {
+			if (event.target.closest(DRAG_BLOCKER_SELECTOR)) return;
+			event.preventDefault();
+			const rect = panel.getBoundingClientRect();
+			initialLeft = rect.left;
+			initialTop = rect.top;
+			startX = event.clientX;
+			startY = event.clientY;
+			panel.style.left = `${initialLeft}px`;
+			panel.style.top = `${initialTop}px`;
+			panel.style.bottom = "auto";
+			panel.style.transform = "none";
+			panel.style.cursor = "grabbing";
+			document.body.classList.add("cdm-dragging");
+			document.addEventListener("mousemove", onMouseMove);
+			document.addEventListener("mouseup", onMouseUp);
+		});
+	}
+	function makePanelResizable(panel) {
+		const resizeHandle = panel.querySelector("#cdm-resize-handle");
+		if (!resizeHandle) return;
+		const minWidth = 360;
+		const minHeight = 120;
+		let startX;
+		let startY;
+		let startWidth;
+		let startHeight;
+		let maxWidth;
+		let maxHeight;
+		function onMouseMove(event) {
+			const deltaX = event.clientX - startX;
+			const deltaY = event.clientY - startY;
+			const width = Math.max(minWidth, Math.min(window.innerWidth - maxWidth, startWidth + deltaX));
+			const height = Math.max(minHeight, Math.min(window.innerHeight - maxHeight, startHeight + deltaY));
+			panel.style.width = `${width}px`;
+			panel.style.height = `${height}px`;
+		}
+		function onMouseUp() {
+			document.body.classList.remove("cdm-resizing");
+			document.removeEventListener("mousemove", onMouseMove);
+			document.removeEventListener("mouseup", onMouseUp);
+		}
+		resizeHandle.addEventListener("mousedown", (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			const rect = panel.getBoundingClientRect();
+			startX = event.clientX;
+			startY = event.clientY;
+			startWidth = rect.width;
+			startHeight = rect.height;
+			maxWidth = rect.left;
+			maxHeight = rect.top;
+			panel.style.left = `${rect.left}px`;
+			panel.style.top = `${rect.top}px`;
+			panel.style.bottom = "auto";
+			panel.style.transform = "none";
+			panel.style.width = `${rect.width}px`;
+			panel.style.height = `${rect.height}px`;
+			panel.style.overflow = "auto";
+			document.body.classList.add("cdm-resizing");
+			document.addEventListener("mousemove", onMouseMove);
+			document.addEventListener("mouseup", onMouseUp);
+		});
+	}
+	function updateStats() {
+		const totalTiles = getCompletedTiles().length;
+		const selectedCount = selectedTileIds.size;
+		const totalChip = document.getElementById("cdm-total-chip");
+		const selectedChip = document.getElementById("cdm-selected-chip");
+		const downloadButton = document.getElementById("cdm-download-btn");
+		const downloadLabel = document.getElementById("cdm-download-label");
+		if (totalChip) totalChip.textContent = `${totalTiles} tile${totalTiles !== 1 ? "s" : ""}`;
+		if (selectedChip) selectedChip.textContent = `${selectedCount} selected`;
+		if (downloadButton) downloadButton.disabled = selectedCount === 0 || isDownloadRunActive;
+		if (downloadLabel) downloadLabel.textContent = isDownloadRunActive ? "Downloading…" : `Download (${selectedCount})`;
+	}
+	function ensureTileOverlay(tileId, tileElement) {
+		const existingOverlay = tileElement.querySelector(`.${TILE_OVERLAY_CLASS}`);
+		if (existingOverlay) return existingOverlay;
+		if (window.getComputedStyle(tileElement).position === "static") tileElement.style.position = "relative";
+		tileElement.style.isolation = "isolate";
+		tileElement.classList.add("cdm-isolated");
+		const overlay = document.createElement("div");
+		overlay.className = `${TILE_OVERLAY_CLASS} cdm-active`;
+		overlay.setAttribute("data-cdm-tile", tileId);
+		const checkboxWrap = document.createElement("div");
+		checkboxWrap.className = "cdm-checkbox-wrap";
+		const checkbox = document.createElement("input");
+		checkbox.type = "checkbox";
+		checkbox.className = "cdm-checkbox";
+		checkbox.setAttribute("data-tile-cb", tileId);
+		checkbox.checked = selectedTileIds.has(tileId);
+		checkbox.addEventListener("change", (event) => {
+			event.stopPropagation();
+			if (checkbox.checked) selectTile(tileId, tileElement);
+			else deselectTile(tileId, tileElement);
+			updateStats();
+		});
+		overlay.addEventListener("click", (event) => {
+			if (event.target === checkbox) return;
+			checkbox.checked = !checkbox.checked;
+			checkbox.dispatchEvent(new Event("change"));
+		});
+		checkboxWrap.appendChild(checkbox);
+		overlay.appendChild(checkboxWrap);
+		const badge = document.createElement("div");
+		badge.className = "cdm-tile-badge";
+		badge.textContent = isVideoTile(tileElement) ? "🎬 VIDEO" : "🖼 IMAGE";
+		overlay.appendChild(badge);
+		tileElement.appendChild(overlay);
+		return overlay;
+	}
+	function selectTile(tileId, tileElement) {
+		selectedTileIds.add(tileId);
+		const checkbox = tileElement.querySelector(`[data-tile-cb="${tileId}"]`);
+		if (checkbox) checkbox.checked = true;
+		let ring = tileElement.querySelector(".cdm-tile-selected-ring");
+		if (!ring) {
+			ring = document.createElement("div");
+			ring.className = "cdm-tile-selected-ring";
+			const overlay = tileElement.querySelector(`.${TILE_OVERLAY_CLASS}`);
+			if (overlay) overlay.appendChild(ring);
+		}
+	}
+	function deselectTile(tileId, tileElement) {
+		selectedTileIds.delete(tileId);
+		const checkbox = tileElement.querySelector(`[data-tile-cb="${tileId}"]`);
+		if (checkbox) checkbox.checked = false;
+		const ring = tileElement.querySelector(".cdm-tile-selected-ring");
+		if (ring) ring.remove();
+	}
+	function injectOverlays() {
+		getCompletedTiles().forEach(({ tileId, tileEl }) => ensureTileOverlay(tileId, tileEl));
+		updateStats();
+	}
+	function removeOverlays() {
+		document.querySelectorAll(`.${TILE_OVERLAY_CLASS}`).forEach((overlay) => overlay.remove());
+		document.querySelectorAll("[data-tile-id].cdm-isolated").forEach((tileElement) => {
+			tileElement.classList.remove("cdm-isolated");
+		});
+	}
+	function getObserverRoot() {
+		return document.querySelector("[data-virtuoso-scroller]") || document.querySelector("[class*=\"tileGrid\"], [class*=\"tile-grid\"], [class*=\"TileGrid\"]") || document.querySelector("main") || document.body;
+	}
+	function attachObserver() {
+		if (tileObserver) return;
+		tileObserver = new MutationObserver((mutations) => {
+			if (!isActiveFlag) return;
+			if (!mutations.some((mutation) => [...mutation.addedNodes].some((node) => {
+				if (node.nodeType !== Node.ELEMENT_NODE) return false;
+				return !node.classList?.contains(TILE_OVERLAY_CLASS) && node.id !== CONTROL_PANEL_ID && node.id !== STYLE_ID;
+			}))) return;
+			clearTimeout(observerRefreshTimer);
+			observerRefreshTimer = setTimeout(() => {
+				if (!isActiveFlag) return;
+				getCompletedTiles().forEach(({ tileId, tileEl }) => {
+					if (!tileEl.querySelector(`.${TILE_OVERLAY_CLASS}`)) ensureTileOverlay(tileId, tileEl);
+				});
+				updateStats();
+			}, 200);
+		});
+		const root = getObserverRoot();
+		tileObserver.observe(root, {
+			childList: true,
+			subtree: true
+		});
+		console.log("[CDM] Observer attached to", root.tagName, root.className?.slice(0, 60) || "");
+	}
+	function detachObserver() {
+		clearTimeout(observerRefreshTimer);
+		observerRefreshTimer = null;
+		if (tileObserver) {
+			tileObserver.disconnect();
+			tileObserver = null;
+		}
+	}
+	function pickQualityButton(menuElement, targetQuality) {
+		const buttons = [...menuElement.querySelectorAll("button[role=\"menuitem\"], button")];
+		if (buttons.length === 0) return null;
+		const buttonData = buttons.map((button) => ({
+			button,
+			label: button.querySelectorAll("span")[0]?.textContent.trim() || button.textContent.trim(),
+			enabled: button.getAttribute("aria-disabled") !== "true"
+		}));
+		const enabledButtons = buttonData.filter((entry) => entry.enabled);
+		if (targetQuality) {
+			const matching = buttonData.find((entry) => entry.label === targetQuality);
+			if (matching && matching.enabled) return matching.button;
+		}
+		return enabledButtons.length > 0 ? enabledButtons[enabledButtons.length - 1].button : buttons[0] || null;
+	}
+	async function downloadTileViaUI(tileElement, targetQuality) {
+		try {
+			const mediaElement = tileElement.querySelector("video[src*=\"media.getMediaUrlRedirect\"]") || tileElement.querySelector("img[src*=\"media.getMediaUrlRedirect\"]");
+			if (!mediaElement) {
+				console.warn("[CDM] No media element in tile");
+				return false;
+			}
+			const rect = mediaElement.getBoundingClientRect();
+			const clientX = rect.left + rect.width / 2;
+			const clientY = rect.top + rect.height / 2;
+			mediaElement.dispatchEvent(new MouseEvent("mouseenter", {
+				bubbles: true,
+				clientX,
+				clientY
+			}));
+			mediaElement.dispatchEvent(new MouseEvent("mousemove", {
+				bubbles: true,
+				clientX,
+				clientY
+			}));
+			await h(400);
+			mediaElement.dispatchEvent(new MouseEvent("contextmenu", {
+				bubbles: true,
+				cancelable: true,
+				clientX,
+				clientY,
+				button: 2
+			}));
+			await h(600);
+			const contextMenu = document.querySelector("[data-radix-menu-content][data-state=\"open\"]");
+			if (!contextMenu) {
+				console.warn("[CDM] Context menu did not open");
+				return false;
+			}
+			const downloadItem = [...contextMenu.querySelectorAll("[role=\"menuitem\"]")].find((item) => item.querySelector("i")?.textContent.trim() === "download");
+			if (!downloadItem) {
+				console.warn("[CDM] Download menuitem not found");
+				document.body.dispatchEvent(new KeyboardEvent("keydown", {
+					key: "Escape",
+					bubbles: true
+				}));
+				return false;
+			}
+			downloadItem.click();
+			await h(600);
+			const menus = [...document.querySelectorAll("[data-radix-menu-content][data-state=\"open\"]")];
+			const qualityMenu = menus.find((menu) => menu !== contextMenu) || menus[menus.length - 1];
+			if (!qualityMenu || qualityMenu === contextMenu) {
+				console.warn("[CDM] Quality sub-menu did not open");
+				document.body.dispatchEvent(new KeyboardEvent("keydown", {
+					key: "Escape",
+					bubbles: true
+				}));
+				return false;
+			}
+			const qualityButton = pickQualityButton(qualityMenu, targetQuality);
+			if (!qualityButton) {
+				console.warn("[CDM] No quality button in sub-menu");
+				document.body.dispatchEvent(new KeyboardEvent("keydown", {
+					key: "Escape",
+					bubbles: true
+				}));
+				return false;
+			}
+			qualityButton.click();
+			await h(300);
+			return true;
+		} catch (error) {
+			console.error("[CDM] downloadTileViaUI error:", error);
+			document.body.dispatchEvent(new KeyboardEvent("keydown", {
+				key: "Escape",
+				bubbles: true
+			}));
+			return false;
+		}
+	}
+	function togglePause() {
+		isPaused = !isPaused;
+		const pauseButton = document.getElementById("cdm-pause-btn");
+		const pauseLabel = document.getElementById("cdm-pause-label");
+		const pausedBadge = document.getElementById("cdm-paused-badge");
+		pauseButton?.classList.toggle("cdm-paused", isPaused);
+		if (pauseLabel) pauseLabel.textContent = isPaused ? "Resume" : "Pause";
+		const icon = pauseButton?.querySelector("svg");
+		if (icon) icon.innerHTML = isPaused ? "<polygon points=\"5,3 19,12 5,21\" fill=\"currentColor\"/>" : "<rect x=\"6\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" fill=\"currentColor\"/><rect x=\"14\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" fill=\"currentColor\"/>";
+		pausedBadge?.classList.toggle("cdm-visible", isPaused);
+		const progressLabel = document.getElementById("cdm-progress-label");
+		if (progressLabel) progressLabel.style.opacity = isPaused ? "0.5" : "";
+	}
+	function stopDownloadRun() {
+		if (!isDownloadRunActive) return;
+		shouldStop = true;
+		if (isPaused) togglePause();
+	}
+	async function startDownloadRun() {
+		if (isDownloadRunActive || selectedTileIds.size === 0) return;
+		isDownloadRunActive = true;
+		isPaused = false;
+		shouldStop = false;
+		queuedTiles = getCompletedTiles().filter(({ tileId }) => selectedTileIds.has(tileId)).map((tile) => ({
+			...tile,
+			quality: tile.isVideo ? videoQuality : imageQuality
+		}));
+		const total = queuedTiles.length;
+		let completed = 0;
+		const progressWrap = document.getElementById("cdm-progress-wrap");
+		const progressLabel = document.getElementById("cdm-progress-label");
+		const progressFill = document.getElementById("cdm-progress-bar-fill");
+		const downloadButton = document.getElementById("cdm-download-btn");
+		const controls = document.getElementById("cdm-download-controls");
+		const pauseButton = document.getElementById("cdm-pause-btn");
+		const pauseLabel = document.getElementById("cdm-pause-label");
+		progressWrap?.classList.add("cdm-visible");
+		if (progressLabel) progressLabel.textContent = `Downloading 0 / ${total}…`;
+		if (progressFill) progressFill.style.width = "0%";
+		controls?.classList.add("cdm-visible");
+		pauseButton?.classList.remove("cdm-paused");
+		if (pauseLabel) pauseLabel.textContent = "Pause";
+		if (downloadButton) {
+			downloadButton.disabled = true;
+			downloadButton.innerHTML = `
       <div class="cdm-spinner"></div>
       <span>Downloading…</span>
-    `);for(const m of Se){if(ie){console.log("[CDM] Download stopped by user");break}for(;N&&!ie;)await se(150);if(ie){console.log("[CDM] Download stopped while paused");break}console.log(`[CDM] Downloading tile ${m.tileId} (quality: ${m.quality})`),m.tileEl.scrollIntoView({behavior:"smooth",block:"center",inline:"nearest"}),await se(350),await Yo(m.tileEl,m.quality),n++,r&&(r.textContent=`Downloading ${n} / ${t}…`),i&&(i.style.width=`${Math.round(n/t*100)}%`),await se(400)}const c=ie;ce=!1,N=!1,ie=!1,Se=[],l&&l.classList.remove("cdm-visible"),d&&d.classList.remove("cdm-paused"),u&&(u.textContent="Pause");const s=document.getElementById("cdm-paused-badge");s&&s.classList.remove("cdm-visible"),r&&(r.style.opacity=""),c?(r&&(r.textContent=`⛔ Stopped after ${n} / ${t}`),i&&(i.style.width=`${Math.round(n/t*100)}%`)):(r&&(r.textContent=`✅ Downloaded ${n} / ${t} complete`),i&&(i.style.width="100%")),a&&(a.innerHTML=`
+    `;
+		}
+		for (const tile of queuedTiles) {
+			if (shouldStop) {
+				console.log("[CDM] Download stopped by user");
+				break;
+			}
+			while (isPaused && !shouldStop) await h(150);
+			if (shouldStop) {
+				console.log("[CDM] Download stopped while paused");
+				break;
+			}
+			console.log(`[CDM] Downloading tile ${tile.tileId} (quality: ${tile.quality})`);
+			tile.tileEl.scrollIntoView({
+				behavior: "smooth",
+				block: "center",
+				inline: "nearest"
+			});
+			await h(350);
+			await downloadTileViaUI(tile.tileEl, tile.quality);
+			completed += 1;
+			if (progressLabel) progressLabel.textContent = `Downloading ${completed} / ${total}…`;
+			if (progressFill) progressFill.style.width = `${Math.round(completed / total * 100)}%`;
+			await h(400);
+		}
+		const wasStopped = shouldStop;
+		isDownloadRunActive = false;
+		isPaused = false;
+		shouldStop = false;
+		queuedTiles = [];
+		controls?.classList.remove("cdm-visible");
+		pauseButton?.classList.remove("cdm-paused");
+		if (pauseLabel) pauseLabel.textContent = "Pause";
+		document.getElementById("cdm-paused-badge")?.classList.remove("cdm-visible");
+		if (progressLabel) {
+			progressLabel.style.opacity = "";
+			progressLabel.textContent = wasStopped ? `⛔ Stopped after ${completed} / ${total}` : `✅ Downloaded ${completed} / ${total} complete`;
+		}
+		if (progressFill) progressFill.style.width = wasStopped ? `${Math.round(completed / total * 100)}%` : "100%";
+		if (downloadButton) {
+			downloadButton.innerHTML = `
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
       </svg>
-      <span id="cdm-download-label">Download (${j.size})</span>
-    `,a.disabled=j.size===0),console.log(`[CDM] Download run complete: ${n}/${t} (stopped=${c})`),setTimeout(()=>{o&&o.classList.remove("cdm-visible")},3e3)}function st(e){const t=document.getElementById(Re);t&&(t.classList.toggle("cdm-dark",!!e),t.classList.toggle("cdm-light",!e))}function Go(){try{chrome.storage.local.get(["darkMode"],e=>{st(e.darkMode!==!1)})}catch{st(!0)}}function Ko(){if(!be){be=(e,t)=>{t!=="local"||!("darkMode"in e)||st(e.darkMode.newValue!==!1)};try{chrome.storage.onChanged.addListener(be)}catch{}}}function Bo(){if(be){try{chrome.storage.onChanged.removeListener(be)}catch{}be=null}}function un(){ne||(ne=!0,console.log("[CDM] Activating Content Download Manager"),Mo(),Lo(),Go(),Ko(),Uo(),qo(),te())}function bt(){if(!ne)return;ne=!1,console.log("[CDM] Deactivating Content Download Manager"),zo(),Bo(),$o();const e=document.getElementById(Re);e&&e.remove(),j.clear(),ce=!1,Se=[]}function Ho(){ne?bt():un()}function Qo(){return ne}console.log("✅ ContentDownloadManager module loaded");const Xo=Object.freeze(Object.defineProperty({__proto__:null,activate:un,deactivate:bt,isActive:Qo,toggle:Ho},Symbol.toStringTag,{value:"Module"}));Pn(ue);On(ue);zn(ue,ee);Qn(ue);jt({getState:ue,setState:ee,getSelectors:()=>Ot,eventBus:_e,stateManager:Je});go({getState:ue,setState:ee,eventBus:_e,monitoring:Wt,stateManager:Je});ho({stateManager:Je,eventBus:_e,monitoring:Wt});So(Je,_e);It(_e,Xo);console.log("✅ Flow Automation bootstrap complete — all modules wired");console.log("📦 Layers: core | interactions (+ imageUploader) | workflow | ui (+ contentDownloadManager)");
+      <span id="cdm-download-label">Download (${selectedTileIds.size})</span>
+    `;
+			downloadButton.disabled = selectedTileIds.size === 0;
+		}
+		console.log(`[CDM] Download run complete: ${completed}/${total} (stopped=${wasStopped})`);
+		setTimeout(() => {
+			progressWrap?.classList.remove("cdm-visible");
+		}, 3e3);
+	}
+	function applyTheme(isDarkMode) {
+		const panel = document.getElementById(CONTROL_PANEL_ID);
+		if (!panel) return;
+		panel.classList.toggle("cdm-dark", Boolean(isDarkMode));
+		panel.classList.toggle("cdm-light", !isDarkMode);
+	}
+	function syncThemeFromStorage() {
+		try {
+			chrome.storage.local.get(["darkMode"], (result) => {
+				applyTheme(result.darkMode !== false);
+			});
+		} catch {
+			applyTheme(true);
+		}
+	}
+	function attachThemeListener() {
+		if (themeListener) return;
+		themeListener = (changes, areaName) => {
+			if (areaName !== "local" || !("darkMode" in changes)) return;
+			applyTheme(changes.darkMode.newValue !== false);
+		};
+		try {
+			chrome.storage.onChanged.addListener(themeListener);
+		} catch {}
+	}
+	function detachThemeListener() {
+		if (!themeListener) return;
+		try {
+			chrome.storage.onChanged.removeListener(themeListener);
+		} catch {}
+		themeListener = null;
+	}
+	function activate() {
+		if (isActiveFlag) return;
+		isActiveFlag = true;
+		console.log("[CDM] Activating Content Download Manager");
+		injectStyles();
+		createControlPanel();
+		syncThemeFromStorage();
+		attachThemeListener();
+		injectOverlays();
+		attachObserver();
+		updateStats();
+	}
+	function deactivate() {
+		if (!isActiveFlag) return;
+		isActiveFlag = false;
+		console.log("[CDM] Deactivating Content Download Manager");
+		detachObserver();
+		detachThemeListener();
+		removeOverlays();
+		const panel = document.getElementById(CONTROL_PANEL_ID);
+		if (panel) panel.remove();
+		selectedTileIds.clear();
+		isDownloadRunActive = false;
+		queuedTiles = [];
+	}
+	function toggle() {
+		if (isActiveFlag) {
+			deactivate();
+			return;
+		}
+		activate();
+	}
+	function isActive() {
+		return isActiveFlag;
+	}
+	//#endregion
+	//#region src/content/index.js
+	init$7(getState$7);
+	init$6(getState$7);
+	init$5(getState$7, setState$4);
+	init$4(getState$7);
+	init$3({
+		getState: getState$7,
+		setState: setState$4,
+		getSelectors: () => SELECTORS,
+		eventBus: eventBus_exports,
+		stateManager: stateManager_exports
+	});
+	init$2({
+		getState: getState$7,
+		setState: setState$4,
+		eventBus: eventBus_exports,
+		monitoring: monitoring_exports,
+		stateManager: stateManager_exports
+	});
+	init$1({
+		stateManager: stateManager_exports,
+		eventBus: eventBus_exports,
+		monitoring: monitoring_exports
+	});
+	init(stateManager_exports, eventBus_exports);
+	init$8(eventBus_exports, contentDownloadManager_exports);
+	function buildUnifiedQueueTasks(queueTasks) {
+		return queueTasks.map((task) => ({
+			queueTaskId: task.id,
+			index: task.index,
+			prompt: task.prompt,
+			type: task.type,
+			status: "pending",
+			expectedVideos: parseInt(task.settings?.count, 10) || 1,
+			foundVideos: 0,
+			videoUrls: [],
+			settings: task.settings,
+			referenceImages: task.referenceImages || null
+		}));
+	}
+	function buildLegacyTasks(message, nextSettings) {
+		const prompts = message.prompts || [];
+		const taskSettings = message.taskSettings || [];
+		const processingMode = message.processingMode || "createvideo";
+		const imagePairs = message.imagePairs || [];
+		if (processingMode === "image" && imagePairs.length > 0) return imagePairs.map((pair, index) => ({
+			index: index + 1,
+			prompt: pair.prompt,
+			image: pair.image,
+			type: "image-to-video",
+			status: "pending",
+			expectedVideos: parseInt(pair.settings?.count, 10) || 1,
+			foundVideos: 0,
+			videoUrls: [],
+			settings: pair.settings
+		}));
+		return prompts.map((prompt, index) => {
+			const taskSetting = taskSettings[index] || {
+				count: nextSettings.flowVideoCount,
+				model: nextSettings.flowModel,
+				aspectRatio: nextSettings.flowAspectRatio
+			};
+			return {
+				index: index + 1,
+				prompt,
+				type: "createvideo",
+				status: "pending",
+				expectedVideos: parseInt(taskSetting.count || taskSetting.videoCount, 10) || 1,
+				foundVideos: 0,
+				videoUrls: [],
+				settings: taskSetting
+			};
+		});
+	}
+	async function restorePausedState(sendResponse, ack) {
+		const storedState = await loadStateFromStorage();
+		if (!storedState || storedState.status !== "paused") {
+			sendResponse({
+				...ack,
+				error: "No paused state to resume"
+			});
+			return;
+		}
+		setState$4({
+			prompts: storedState.prompts || [],
+			currentPromptIndex: storedState.currentIndex || 0,
+			settings: storedState.settings || getSettings(),
+			taskList: storedState.taskList || [],
+			currentTaskIndex: storedState.currentTaskIndex || 0,
+			isProcessing: true
+		});
+		setState$4({ isPausing: false });
+		chrome.runtime.sendMessage({
+			action: "setPageZoom",
+			zoomFactor: FLOW_PAGE_ZOOM_FACTOR
+		}).catch(() => {});
+		console.log(`▶️ Resuming Flow from prompt ${getState$7().currentPromptIndex + 1}/${getState$7().prompts.length}`);
+		console.log(`📋 Restored ${getState$7().taskList.length} tasks`);
+		saveStateToStorage();
+		getState$7().taskList.forEach((task) => sendTaskUpdate(task));
+		emit(EVENTS.QUEUE_NEXT);
+		sendResponse({
+			...ack,
+			resumed: true
+		});
+	}
+	async function restoreAfterCacheClean(sendResponse, ack) {
+		const storedState = await loadStateFromStorage();
+		if (!storedState || !["running", "paused"].includes(storedState.status) || !storedState.prompts?.length) {
+			console.warn("⚠️ resumeAfterCacheClean: no valid saved state found — cannot auto-resume");
+			sendResponse({
+				...ack,
+				error: "No valid saved state"
+			});
+			return;
+		}
+		setState$4({
+			prompts: storedState.prompts || [],
+			currentPromptIndex: storedState.currentIndex || 0,
+			settings: storedState.settings || getSettings(),
+			taskList: storedState.taskList || [],
+			currentTaskIndex: storedState.currentTaskIndex || 0,
+			isProcessing: true,
+			isPausing: false,
+			lastAppliedSettings: null,
+			lastAppliedMode: null
+		});
+		chrome.runtime.sendMessage({
+			action: "setPageZoom",
+			zoomFactor: FLOW_PAGE_ZOOM_FACTOR
+		}).catch(() => {});
+		saveStateToStorage();
+		getState$7().taskList.forEach((task) => sendTaskUpdate(task));
+		console.log(`🔄 resumeAfterCacheClean: restored ${getState$7().taskList.length} tasks, resuming from index ${getState$7().currentPromptIndex}`);
+		emit(EVENTS.QUEUE_NEXT);
+		sendResponse({
+			...ack,
+			resumed: true
+		});
+	}
+	function clickNewProjectButton(sendResponse) {
+		try {
+			const button = $("//button[.//i[normalize-space()='add_2']]");
+			if (!button) {
+				console.warn("⚠️ New project button not found");
+				sendResponse({
+					success: false,
+					error: "Button not found"
+				});
+				return;
+			}
+			console.log("✅ New project button found. Clicking...");
+			button.click();
+			sendResponse({ success: true });
+		} catch (error) {
+			console.error("❌ Error clicking new project button:", error);
+			sendResponse({
+				success: false,
+				error: error.message
+			});
+		}
+	}
+	chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+		const ack = { received: true };
+		if (message.action === "startProcessing") {
+			verifyAuthenticationState().then((authState) => {
+				if (!authState.isLoggedIn) {
+					const error = authState.error || "Authentication required. Please sign in first.";
+					chrome.runtime.sendMessage({
+						action: "error",
+						error
+					});
+					sendResponse({
+						...ack,
+						error
+					});
+					return;
+				}
+				if (getState$7().isProcessing) {
+					sendResponse({
+						...ack,
+						error: "Already processing"
+					});
+					return;
+				}
+				const incomingSettings = message.settings || {};
+				const currentSettings = getSettings();
+				const nextSettings = {
+					...currentSettings,
+					...incomingSettings,
+					flowVideoCount: incomingSettings.flowVideoCount || currentSettings.flowVideoCount,
+					flowModel: incomingSettings.flowModel || currentSettings.flowModel,
+					flowAspectRatio: incomingSettings.flowAspectRatio || currentSettings.flowAspectRatio
+				};
+				setState$4({
+					settings: nextSettings,
+					isProcessing: true,
+					currentPromptIndex: 0,
+					currentTaskIndex: 0,
+					lastAppliedSettings: null,
+					lastAppliedMode: null,
+					fallbackModel: null
+				});
+				let taskList;
+				let prompts;
+				if (message.useUnifiedQueue && Array.isArray(message.queueTasks) && message.queueTasks.length > 0) {
+					console.log("🎯 Using UNIFIED QUEUE system");
+					taskList = buildUnifiedQueueTasks(message.queueTasks);
+					prompts = taskList.map((task) => task.prompt);
+					console.log(`✅ Created ${taskList.length} tasks from unified queue (${taskList.filter((task) => task.type === "createvideo").length} video, ${taskList.filter((task) => task.type === "createimage").length} image)`);
+				} else {
+					console.log("⚠️ Using LEGACY task system");
+					taskList = buildLegacyTasks(message, nextSettings);
+					prompts = taskList.map((task) => task.prompt);
+					console.log(`✅ Created ${taskList.length} tasks from legacy flow`);
+				}
+				setState$4({
+					taskList,
+					prompts
+				});
+				saveStateToStorage();
+				emit(EVENTS.QUEUE_NEXT);
+				sendResponse({
+					...ack,
+					started: true
+				});
+			}).catch((error) => {
+				const messageText = error?.message || "Could not start processing. Please try again.";
+				chrome.runtime.sendMessage({
+					action: "error",
+					error: messageText
+				});
+				sendResponse({
+					...ack,
+					error: messageText
+				});
+			});
+			return true;
+		}
+		if (message.action === "resumeProcessing") {
+			restorePausedState(sendResponse, ack);
+			return true;
+		}
+		if (message.action === "resumeAfterCacheClean") {
+			restoreAfterCacheClean(sendResponse, ack);
+			return true;
+		}
+		if (message.action === "stopProcessing") {
+			emit(EVENTS.PROCESSING_STOP);
+			clearCountdownTimer$1();
+			setState$4({
+				isProcessing: false,
+				isPausing: true
+			});
+			chrome.runtime.sendMessage({ action: "resetPageZoom" }).catch(() => {});
+			saveStateToStorage();
+			if (getState$7().isCurrentPromptProcessed) {
+				setState$4({ isPausing: false });
+				emit(EVENTS.OVERLAY_HIDE);
+				chrome.runtime.sendMessage({
+					action: "updateStatus",
+					status: "Processing paused. Click Resume to continue."
+				});
+			} else {
+				emit(EVENTS.OVERLAY_PAUSING);
+				chrome.runtime.sendMessage({
+					action: "updateStatus",
+					status: "Flow will pause after current prompt completes..."
+				});
+			}
+			sendResponse(ack);
+			return false;
+		}
+		if (message.action === "terminateProcessing") {
+			chrome.runtime.sendMessage({ action: "resetPageZoom" }).catch(() => {});
+			setState$4({
+				isProcessing: false,
+				isPausing: false,
+				prompts: [],
+				currentPromptIndex: 0,
+				taskList: [],
+				currentTaskIndex: 0,
+				lastAppliedSettings: null,
+				lastAppliedMode: null,
+				fallbackModel: null
+			});
+			clearStateFromStorage();
+			emit(EVENTS.PROCESSING_TERMINATE);
+			emit(EVENTS.OVERLAY_HIDE);
+			sendResponse({
+				...ack,
+				terminated: true
+			});
+			return false;
+		}
+		if (message.action === "getStoredState") {
+			loadStateFromStorage().then((storedState) => {
+				sendResponse({
+					...ack,
+					state: storedState
+				});
+			});
+			return true;
+		}
+		if (message.action === "authStateChanged") {
+			setState$4({
+				isUserLoggedIn: message.isLoggedIn,
+				subscriptionStatus: message.subscriptionStatus,
+				userId: message.userId
+			});
+			sendResponse({ success: true });
+			return false;
+		}
+		if (message.action === "activateContentDownloader") {
+			toggle();
+			sendResponse({
+				...ack,
+				toggled: true
+			});
+			return false;
+		}
+		if (message.action === "clickNewProjectButton") {
+			clickNewProjectButton(sendResponse);
+			return true;
+		}
+		if (message.action === "pingFlowContent") {
+			sendResponse({ pong: true });
+			return false;
+		}
+		sendResponse(ack);
+		return false;
+	});
+	document.addEventListener("visibilitychange", () => {
+		if (document.hidden) return;
+		setTimeout(() => {
+			verifyAuthenticationState().then((authState) => {
+				chrome.runtime.sendMessage({
+					action: "authStateRefreshed",
+					authState
+				}).catch(() => {});
+			});
+		}, 500);
+	});
+	window.addEventListener("focus", () => {
+		setTimeout(() => {
+			verifyAuthenticationState().then((authState) => {
+				chrome.runtime.sendMessage({
+					action: "authStateRefreshed",
+					authState
+				}).catch(() => {});
+			});
+		}, 500);
+	});
+	chrome.runtime.sendMessage({ action: "getAuthState" }, (response) => {
+		if (!response) return;
+		setState$4({
+			isUserLoggedIn: response.isLoggedIn,
+			subscriptionStatus: response.subscriptionStatus
+		});
+	});
+	console.log("✅ Flow Automation bootstrap complete — all modules wired");
+	console.log("📦 Layers: core | interactions (+ imageUploader) | workflow | ui (+ contentDownloadManager)");
+	//#endregion
+})();

@@ -1,0 +1,11 @@
+{
+  "name": "automator-images",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:flow-content",
+    "build:flow-content": "vite build --config vite.config.mjs && node scripts/publish-flow-content.mjs"
+  },
+  "devDependencies": {
+    "vite": "^8.0.3"
+  }
+}
