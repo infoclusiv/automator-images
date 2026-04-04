@@ -1,3 +1,4 @@
+import * as logger from "./logger.js";
 import { FLOW_PAGE_ZOOM_FACTOR, SELECTORS } from "./constants.js";
 import { $ } from "./domUtils.js";
 import { EVENTS } from "./eventBus.js";
@@ -12,6 +13,27 @@ import * as taskRunner from "./taskRunner.js";
 import * as queueController from "./queueController.js";
 import * as overlayManager from "./overlayManager.js";
 import * as contentDownloadManager from "./contentDownloadManager.js";
+
+function buildContentLogContext() {
+  const currentState = state.getState?.() || {};
+  const currentTask = currentState.taskList?.[currentState.currentPromptIndex] || null;
+
+  return {
+    href: window.location.href,
+    isProcessing: currentState.isProcessing,
+    isPausing: currentState.isPausing,
+    currentPromptIndex: currentState.currentPromptIndex,
+    promptCount: currentState.prompts?.length || 0,
+    currentTask,
+  };
+}
+
+logger.installConsoleCapture({ getBaseContext: buildContentLogContext });
+logger.installGlobalErrorLogging({ getBaseContext: buildContentLogContext });
+logger.logEvent("content.bootstrap", "Flow content script bootstrap started", {
+  href: window.location.href,
+  sessionId: logger.getContentSessionId(),
+});
 
 textInjector.init(state.getState);
 submitHandler.init(state.getState);
@@ -101,6 +123,9 @@ function buildLegacyTasks(message, nextSettings) {
 async function restorePausedState(sendResponse, ack) {
   const storedState = await state.loadStateFromStorage();
   if (!storedState || storedState.status !== "paused") {
+    logger.logEvent("processing.resume_failed", "Resume requested without paused state", {
+      storedStateStatus: storedState?.status || null,
+    }, "warn");
     sendResponse({ ...ack, error: "No paused state to resume" });
     return;
   }
@@ -121,6 +146,10 @@ async function restorePausedState(sendResponse, ack) {
     `▶️ Resuming Flow from prompt ${state.getState().currentPromptIndex + 1}/${state.getState().prompts.length}`,
   );
   console.log(`📋 Restored ${state.getState().taskList.length} tasks`);
+  logger.logEvent("processing.resumed", "Flow processing resumed from paused state", {
+    taskCount: state.getState().taskList.length,
+    currentPromptIndex: state.getState().currentPromptIndex,
+  });
 
   state.saveStateToStorage();
   state.getState().taskList.forEach((task) => state.sendTaskUpdate(task));
@@ -132,6 +161,9 @@ async function restoreAfterCacheClean(sendResponse, ack) {
   const storedState = await state.loadStateFromStorage();
   if (!storedState || !["running", "paused"].includes(storedState.status) || !storedState.prompts?.length) {
     console.warn("⚠️ resumeAfterCacheClean: no valid saved state found — cannot auto-resume");
+    logger.logEvent("processing.resume_after_cache_clean_failed", "Resume after cache clean failed because state was unavailable", {
+      storedStateStatus: storedState?.status || null,
+    }, "warn");
     sendResponse({ ...ack, error: "No valid saved state" });
     return;
   }
@@ -155,6 +187,10 @@ async function restoreAfterCacheClean(sendResponse, ack) {
   console.log(
     `🔄 resumeAfterCacheClean: restored ${state.getState().taskList.length} tasks, resuming from index ${state.getState().currentPromptIndex}`,
   );
+  logger.logEvent("processing.resumed_after_cache_clean", "Flow processing resumed after cache clean", {
+    taskCount: state.getState().taskList.length,
+    currentPromptIndex: state.getState().currentPromptIndex,
+  });
 
   eventBus.emit(EVENTS.QUEUE_NEXT);
   sendResponse({ ...ack, resumed: true });
@@ -182,17 +218,27 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   const ack = { received: true };
 
   if (message.action === "startProcessing") {
+    logger.logEvent("processing.start_requested", "Start processing request received", {
+      useUnifiedQueue: Boolean(message.useUnifiedQueue),
+      queueTaskCount: message.queueTasks?.length || 0,
+      promptCount: message.prompts?.length || 0,
+      settings: message.settings || {},
+    });
     state
       .verifyAuthenticationState()
       .then((authState) => {
         if (!authState.isLoggedIn) {
           const error = authState.error || "Authentication required. Please sign in first.";
+          logger.logEvent("processing.start_rejected", error, { authState }, "warn");
           chrome.runtime.sendMessage({ action: "error", error });
           sendResponse({ ...ack, error });
           return;
         }
 
         if (state.getState().isProcessing) {
+          logger.logEvent("processing.start_ignored", "Start request ignored because processing is already active", {
+            currentPromptIndex: state.getState().currentPromptIndex,
+          }, "warn");
           sendResponse({ ...ack, error: "Already processing" });
           return;
         }
@@ -237,11 +283,20 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
         state.setState({ taskList, prompts });
         state.saveStateToStorage();
+        logger.logEvent("processing.started", "Flow processing started", {
+          mode: message.useUnifiedQueue ? "unified" : "legacy",
+          taskCount: taskList.length,
+          prompts,
+          taskList,
+        });
         eventBus.emit(EVENTS.QUEUE_NEXT);
         sendResponse({ ...ack, started: true });
       })
       .catch((error) => {
         const messageText = error?.message || "Could not start processing. Please try again.";
+        logger.logError("processing.start_exception", error, {
+          requestedMode: message.useUnifiedQueue ? "unified" : "legacy",
+        });
         chrome.runtime.sendMessage({ action: "error", error: messageText });
         sendResponse({ ...ack, error: messageText });
       });
@@ -250,16 +305,21 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.action === "resumeProcessing") {
+    logger.logEvent("processing.resume_requested", "Resume processing requested");
     restorePausedState(sendResponse, ack);
     return true;
   }
 
   if (message.action === "resumeAfterCacheClean") {
+    logger.logEvent("processing.resume_after_cache_clean_requested", "Resume after cache clean requested");
     restoreAfterCacheClean(sendResponse, ack);
     return true;
   }
 
   if (message.action === "stopProcessing") {
+    logger.logEvent("processing.pause_requested", "Pause processing requested", {
+      currentPromptIndex: state.getState().currentPromptIndex,
+    });
     eventBus.emit(EVENTS.PROCESSING_STOP);
     state.clearCountdownTimer();
     state.setState({ isProcessing: false, isPausing: true });
@@ -286,6 +346,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.action === "terminateProcessing") {
+    logger.logEvent("processing.terminate_requested", "Terminate processing requested", {
+      currentPromptIndex: state.getState().currentPromptIndex,
+      pendingTasks: state.getState().taskList?.length || 0,
+    }, "warn");
     chrome.runtime.sendMessage({ action: "resetPageZoom" }).catch(() => {});
     state.setState({
       isProcessing: false,
@@ -375,3 +439,6 @@ chrome.runtime.sendMessage({ action: "getAuthState" }, (response) => {
 
 console.log("✅ Flow Automation bootstrap complete — all modules wired");
 console.log("📦 Layers: core | interactions (+ imageUploader) | workflow | ui (+ contentDownloadManager)");
+logger.logEvent("content.bootstrap_complete", "Flow automation bootstrap complete", {
+  href: window.location.href,
+});

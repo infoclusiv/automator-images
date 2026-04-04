@@ -1,6 +1,7 @@
 import { EVENTS } from "./eventBus.js";
 import { h } from "./domUtils.js";
 import { attachAllImages, clearExistingReferences, uploadAllImages } from "./imageUploader.js";
+import * as logger from "./logger.js";
 import { applyUnifiedSettings } from "./settingsApplicator.js";
 import { clickSubmit } from "./submitHandler.js";
 import { injectText } from "./textInjector.js";
@@ -96,6 +97,11 @@ export async function runTask(task, taskIndex) {
   const isImageTask = nextTask.type === "createimage";
   const taskType = isImageTask ? "createimage" : "createvideo";
   const mediaType = isImageTask ? "image" : "video";
+
+  logger.logEvent("task.run_started", `Starting ${taskType} task ${nextTask.index}`, {
+    taskIndex,
+    task: nextTask,
+  });
 
   setState?.({ currentProcessingPrompt: prompt, currentTaskStartTime: Date.now() });
 
@@ -240,6 +246,10 @@ export async function runTask(task, taskIndex) {
 
   console.log(`✅ Submitted prompt: "${prompt}"`);
   console.log("🔍 Step 4/4: Monitoring for completion...");
+  logger.logEvent("task.submitted", `Task ${nextTask.index} submitted to Flow`, {
+    taskIndex,
+    task: nextTask,
+  });
   eventBus?.emit(
     EVENTS.OVERLAY_MESSAGE,
     isImageTask ? "Step 4/4: Monitoring image generation..." : "Step 4/4: Monitoring video generation...",
@@ -259,6 +269,10 @@ export async function runTask(task, taskIndex) {
 
   if (errorAfterSubmit === "POLICY_PROMPT") {
     console.error("❌ Prompt violates policy — skipping");
+    logger.logEvent("task.policy_violation", `Task ${nextTask.index} violated Flow policy`, {
+      taskIndex,
+      task: nextTask,
+    }, "warn");
     eventBus?.emit(EVENTS.OVERLAY_MESSAGE, "⚠️ Policy violation detected. Skipping this prompt...");
     stateManager?.updateTask?.(taskIndex, { status: "error" });
     stateManager?.sendTaskUpdate?.(nextTask);

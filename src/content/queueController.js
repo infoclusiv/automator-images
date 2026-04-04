@@ -5,6 +5,7 @@ import {
   RETRY_DELAY_MS,
 } from "./constants.js";
 import { EVENTS } from "./eventBus.js";
+import * as logger from "./logger.js";
 import { runTask } from "./taskRunner.js";
 
 let stateManager = null;
@@ -94,6 +95,10 @@ async function onTaskCompleted({ task, taskIndex }) {
   }
 
   console.log(`✅ Queue: Task ${task?.index} completed — moving to next`);
+  logger.logEvent("task.completed", `Task ${task?.index} completed`, {
+    taskIndex,
+    task,
+  });
 
   if (task?.queueTaskId) {
     chrome.runtime
@@ -131,6 +136,11 @@ function onTaskSkipped({ task, taskIndex }) {
 
 function onTaskError({ task, taskIndex, reason }) {
   console.warn(`⚠️ Queue: Task ${task?.index} error — reason: ${reason}`);
+  logger.logEvent("task.error", `Task ${task?.index} reported an error`, {
+    taskIndex,
+    task,
+    reason,
+  }, "warn");
 
   if (stateManager.getState().currentRetries >= MAX_RETRIES - 1 && task?.queueTaskId) {
     chrome.runtime
@@ -146,6 +156,10 @@ function onTaskStart({ task }) {
     return;
   }
 
+  logger.logEvent("task.current", `Task ${task.index} is now current`, {
+    task,
+  });
+
   chrome.runtime
     .sendMessage({ action: "taskStatusUpdate", taskId: task.queueTaskId, status: "current" })
     .catch(() => {});
@@ -156,6 +170,11 @@ function retryOrFail() {
   if (state.currentRetries < MAX_RETRIES) {
     stateManager.setState({ currentRetries: state.currentRetries + 1 });
     const message = `Retry ${stateManager.getState().currentRetries}/${MAX_RETRIES}: Waiting for Flow Labs interface...`;
+    logger.logEvent("task.retry_scheduled", message, {
+      currentPromptIndex: state.currentPromptIndex,
+      currentRetries: stateManager.getState().currentRetries,
+      maxRetries: MAX_RETRIES,
+    }, "warn");
 
     eventBus.emit(EVENTS.OVERLAY_MESSAGE, message);
     chrome.runtime.sendMessage({ action: "updateStatus", status: message });
@@ -170,6 +189,13 @@ function retryOrFail() {
     stateManager.updateTask?.(state.currentPromptIndex, { status: "error" });
     stateManager.sendTaskUpdate?.(currentTask);
   }
+
+  logger.logEvent("processing.failed", "Flow processing stopped after exhausting retries", {
+    currentPromptIndex: state.currentPromptIndex,
+    currentRetries: state.currentRetries,
+    maxRetries: MAX_RETRIES,
+    currentTask,
+  }, "error");
 
   chrome.runtime.sendMessage({
     action: "error",
@@ -210,6 +236,10 @@ function runCurrentTask() {
   const currentTask = stateManager.getCurrentTask?.();
   if (!currentTask) {
     console.error("❌ QueueController: No task at current index");
+    logger.logEvent("task.missing", "No task found for the current prompt index", {
+      currentPromptIndex: state.currentPromptIndex,
+      taskCount: state.taskList?.length || 0,
+    }, "error");
     retryOrFail();
     return;
   }

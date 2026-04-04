@@ -11,6 +11,192 @@
 		return target;
 	};
 	//#endregion
+	//#region src/content/logger.js
+	var CONTENT_SESSION_ID = `content-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+	var CONSOLE_LEVELS = {
+		log: "info",
+		info: "info",
+		warn: "warn",
+		error: "error"
+	};
+	function sanitizeValue(value, depth = 0, seen = /* @__PURE__ */ new WeakSet()) {
+		if (value === null || value === void 0) return value;
+		if (depth > 5) return "[max-depth]";
+		if (typeof value === "string") {
+			if (value.startsWith("data:")) return `${value.slice(0, 48)}...[omitted]`;
+			return value.length > 4e3 ? `${value.slice(0, 4e3)}...[truncated]` : value;
+		}
+		if (typeof value === "number" || typeof value === "boolean") return value;
+		if (typeof value === "bigint") return value.toString();
+		if (value instanceof Error) return {
+			name: value.name,
+			message: value.message,
+			stack: value.stack || null
+		};
+		if (value instanceof Date) return value.toISOString();
+		if (Array.isArray(value)) return value.slice(0, 50).map((item) => sanitizeValue(item, depth + 1, seen));
+		if (typeof value === "function") return `[function ${value.name || "anonymous"}]`;
+		if (typeof value === "object") {
+			if (seen.has(value)) return "[circular]";
+			seen.add(value);
+			if (value instanceof HTMLElement) return {
+				tagName: value.tagName,
+				id: value.id || null,
+				className: value.className || null,
+				text: (value.textContent || "").trim().slice(0, 300)
+			};
+			if (value instanceof File) return {
+				name: value.name,
+				size: value.size,
+				type: value.type
+			};
+			const output = {};
+			for (const [key, nestedValue] of Object.entries(value).slice(0, 100)) {
+				if (key === "referenceImages" && nestedValue?.images) {
+					output[key] = {
+						...nestedValue,
+						images: nestedValue.images.map((image) => ({
+							name: image?.name || null,
+							size: image?.size || null,
+							type: image?.type || null,
+							hasData: Boolean(image?.data),
+							data: image?.data ? "[base64 omitted]" : null
+						}))
+					};
+					continue;
+				}
+				if (key === "data" && typeof nestedValue === "string" && nestedValue.startsWith("data:")) {
+					output[key] = "[base64 omitted]";
+					continue;
+				}
+				output[key] = sanitizeValue(nestedValue, depth + 1, seen);
+			}
+			return output;
+		}
+		return String(value);
+	}
+	function summarizeArgs(args) {
+		return args.map((arg) => {
+			if (typeof arg === "string") return arg;
+			if (arg instanceof Error) return arg.stack || `${arg.name}: ${arg.message}`;
+			try {
+				return JSON.stringify(sanitizeValue(arg));
+			} catch {
+				return String(arg);
+			}
+		}).join(" ").slice(0, 4e3);
+	}
+	function normalizeLevel(level) {
+		const normalized = String(level || "info").toLowerCase();
+		return [
+			"debug",
+			"info",
+			"warn",
+			"error"
+		].includes(normalized) ? normalized : "info";
+	}
+	function safeBaseContext(getBaseContext) {
+		if (typeof getBaseContext !== "function") return {};
+		try {
+			return sanitizeValue(getBaseContext() || {});
+		} catch {
+			return { loggerContextError: true };
+		}
+	}
+	function postLog(entry) {
+		try {
+			chrome.runtime.sendMessage({
+				action: "appendLog",
+				entry
+			}).catch(() => {});
+		} catch {}
+	}
+	function buildEntry({ level = "info", event = "content.event", message = "", context = {} }) {
+		return {
+			source: "content",
+			level: normalizeLevel(level),
+			event,
+			message,
+			sessionId: CONTENT_SESSION_ID,
+			url: window.location.href,
+			context: sanitizeValue(context)
+		};
+	}
+	function logEvent(event, message, context = {}, level = "info") {
+		postLog(buildEntry({
+			level,
+			event,
+			message,
+			context
+		}));
+	}
+	function logError(event, error, context = {}) {
+		const errorContext = {
+			...context,
+			error: sanitizeValue(error)
+		};
+		postLog(buildEntry({
+			level: "error",
+			event,
+			message: error && typeof error === "object" && "message" in error && error.message || String(error || "Unknown content error"),
+			context: errorContext
+		}));
+	}
+	function installConsoleCapture({ getBaseContext } = {}) {
+		for (const [method, level] of Object.entries(CONSOLE_LEVELS)) {
+			const currentMethod = console[method];
+			if (currentMethod?.__flowLogPatched) continue;
+			const originalMethod = currentMethod.bind(console);
+			const wrappedMethod = (...args) => {
+				originalMethod(...args);
+				queueMicrotask(() => {
+					postLog(buildEntry({
+						level,
+						event: `console.${method}`,
+						message: summarizeArgs(args),
+						context: {
+							args: sanitizeValue(args),
+							...safeBaseContext(getBaseContext)
+						}
+					}));
+				});
+			};
+			wrappedMethod.__flowLogPatched = true;
+			console[method] = wrappedMethod;
+		}
+	}
+	function installGlobalErrorLogging({ getBaseContext } = {}) {
+		window.addEventListener("error", (event) => {
+			postLog(buildEntry({
+				level: "error",
+				event: "runtime.error",
+				message: event?.message || "Unhandled runtime error",
+				context: {
+					filename: event?.filename || null,
+					lineno: event?.lineno || null,
+					colno: event?.colno || null,
+					error: sanitizeValue(event?.error || null),
+					...safeBaseContext(getBaseContext)
+				}
+			}));
+		});
+		window.addEventListener("unhandledrejection", (event) => {
+			const reason = event?.reason;
+			postLog(buildEntry({
+				level: "error",
+				event: "runtime.unhandledrejection",
+				message: reason && typeof reason === "object" && "message" in reason && reason.message || String(reason || "Unhandled promise rejection"),
+				context: {
+					reason: sanitizeValue(reason),
+					...safeBaseContext(getBaseContext)
+				}
+			}));
+		});
+	}
+	function getContentSessionId() {
+		return CONTENT_SESSION_ID;
+	}
+	//#endregion
 	//#region src/content/constants.js
 	var SELECTORS = {
 		PROMPT_POLICY_ERROR_POPUP_XPATH: "//li[@data-sonner-toast and .//i[normalize-space(text())='error'] and not(.//*[contains(., '5')])]",
@@ -1963,6 +2149,10 @@
 		const isImageTask = nextTask.type === "createimage";
 		const taskType = isImageTask ? "createimage" : "createvideo";
 		const mediaType = isImageTask ? "image" : "video";
+		logEvent("task.run_started", `Starting ${taskType} task ${nextTask.index}`, {
+			taskIndex,
+			task: nextTask
+		});
 		setState$1?.({
 			currentProcessingPrompt: prompt,
 			currentTaskStartTime: Date.now()
@@ -2069,6 +2259,10 @@
 		}
 		console.log(`✅ Submitted prompt: "${prompt}"`);
 		console.log("🔍 Step 4/4: Monitoring for completion...");
+		logEvent("task.submitted", `Task ${nextTask.index} submitted to Flow`, {
+			taskIndex,
+			task: nextTask
+		});
 		eventBus$1?.emit(EVENTS.OVERLAY_MESSAGE, isImageTask ? "Step 4/4: Monitoring image generation..." : "Step 4/4: Monitoring video generation...");
 		const errorAfterSubmit = monitoring$1?.checkForErrorsAfterSubmit ? await monitoring$1.checkForErrorsAfterSubmit() : null;
 		if (errorAfterSubmit === "QUEUE_FULL") {
@@ -2080,6 +2274,10 @@
 		}
 		if (errorAfterSubmit === "POLICY_PROMPT") {
 			console.error("❌ Prompt violates policy — skipping");
+			logEvent("task.policy_violation", `Task ${nextTask.index} violated Flow policy`, {
+				taskIndex,
+				task: nextTask
+			}, "warn");
 			eventBus$1?.emit(EVENTS.OVERLAY_MESSAGE, "⚠️ Policy violation detected. Skipping this prompt...");
 			stateManager$2?.updateTask?.(taskIndex, { status: "error" });
 			stateManager$2?.sendTaskUpdate?.(nextTask);
@@ -2182,6 +2380,10 @@
 		const state = stateManager$1.getState();
 		if (state.isCurrentPromptProcessed) return;
 		console.log(`✅ Queue: Task ${task?.index} completed — moving to next`);
+		logEvent("task.completed", `Task ${task?.index} completed`, {
+			taskIndex,
+			task
+		});
 		if (task?.queueTaskId) chrome.runtime.sendMessage({
 			action: "taskStatusUpdate",
 			taskId: task.queueTaskId,
@@ -2216,6 +2418,11 @@
 	}
 	function onTaskError({ task, taskIndex, reason }) {
 		console.warn(`⚠️ Queue: Task ${task?.index} error — reason: ${reason}`);
+		logEvent("task.error", `Task ${task?.index} reported an error`, {
+			taskIndex,
+			task,
+			reason
+		}, "warn");
 		if (stateManager$1.getState().currentRetries >= 2 && task?.queueTaskId) chrome.runtime.sendMessage({
 			action: "taskStatusUpdate",
 			taskId: task.queueTaskId,
@@ -2225,6 +2432,7 @@
 	}
 	function onTaskStart({ task }) {
 		if (!task?.queueTaskId) return;
+		logEvent("task.current", `Task ${task.index} is now current`, { task });
 		chrome.runtime.sendMessage({
 			action: "taskStatusUpdate",
 			taskId: task.queueTaskId,
@@ -2236,6 +2444,11 @@
 		if (state.currentRetries < 3) {
 			stateManager$1.setState({ currentRetries: state.currentRetries + 1 });
 			const message = `Retry ${stateManager$1.getState().currentRetries}/3: Waiting for Flow Labs interface...`;
+			logEvent("task.retry_scheduled", message, {
+				currentPromptIndex: state.currentPromptIndex,
+				currentRetries: stateManager$1.getState().currentRetries,
+				maxRetries: 3
+			}, "warn");
 			eventBus.emit(EVENTS.OVERLAY_MESSAGE, message);
 			chrome.runtime.sendMessage({
 				action: "updateStatus",
@@ -2250,6 +2463,12 @@
 			stateManager$1.updateTask?.(state.currentPromptIndex, { status: "error" });
 			stateManager$1.sendTaskUpdate?.(currentTask);
 		}
+		logEvent("processing.failed", "Flow processing stopped after exhausting retries", {
+			currentPromptIndex: state.currentPromptIndex,
+			currentRetries: state.currentRetries,
+			maxRetries: 3,
+			currentTask
+		}, "error");
 		chrome.runtime.sendMessage({
 			action: "error",
 			error: "Unable to find Flow Labs interface elements after multiple attempts. Make sure you are on the correct page."
@@ -2280,6 +2499,10 @@
 		const currentTask = stateManager$1.getCurrentTask?.();
 		if (!currentTask) {
 			console.error("❌ QueueController: No task at current index");
+			logEvent("task.missing", "No task found for the current prompt index", {
+				currentPromptIndex: state.currentPromptIndex,
+				taskCount: state.taskList?.length || 0
+			}, "error");
 			retryOrFail();
 			return;
 		}
@@ -3992,6 +4215,24 @@
 	}
 	//#endregion
 	//#region src/content/index.js
+	function buildContentLogContext() {
+		const currentState = getState$7?.() || {};
+		const currentTask = currentState.taskList?.[currentState.currentPromptIndex] || null;
+		return {
+			href: window.location.href,
+			isProcessing: currentState.isProcessing,
+			isPausing: currentState.isPausing,
+			currentPromptIndex: currentState.currentPromptIndex,
+			promptCount: currentState.prompts?.length || 0,
+			currentTask
+		};
+	}
+	installConsoleCapture({ getBaseContext: buildContentLogContext });
+	installGlobalErrorLogging({ getBaseContext: buildContentLogContext });
+	logEvent("content.bootstrap", "Flow content script bootstrap started", {
+		href: window.location.href,
+		sessionId: getContentSessionId()
+	});
 	init$7(getState$7);
 	init$6(getState$7);
 	init$5(getState$7, setState$4);
@@ -4068,6 +4309,7 @@
 	async function restorePausedState(sendResponse, ack) {
 		const storedState = await loadStateFromStorage();
 		if (!storedState || storedState.status !== "paused") {
+			logEvent("processing.resume_failed", "Resume requested without paused state", { storedStateStatus: storedState?.status || null }, "warn");
 			sendResponse({
 				...ack,
 				error: "No paused state to resume"
@@ -4089,6 +4331,10 @@
 		}).catch(() => {});
 		console.log(`▶️ Resuming Flow from prompt ${getState$7().currentPromptIndex + 1}/${getState$7().prompts.length}`);
 		console.log(`📋 Restored ${getState$7().taskList.length} tasks`);
+		logEvent("processing.resumed", "Flow processing resumed from paused state", {
+			taskCount: getState$7().taskList.length,
+			currentPromptIndex: getState$7().currentPromptIndex
+		});
 		saveStateToStorage();
 		getState$7().taskList.forEach((task) => sendTaskUpdate(task));
 		emit(EVENTS.QUEUE_NEXT);
@@ -4101,6 +4347,7 @@
 		const storedState = await loadStateFromStorage();
 		if (!storedState || !["running", "paused"].includes(storedState.status) || !storedState.prompts?.length) {
 			console.warn("⚠️ resumeAfterCacheClean: no valid saved state found — cannot auto-resume");
+			logEvent("processing.resume_after_cache_clean_failed", "Resume after cache clean failed because state was unavailable", { storedStateStatus: storedState?.status || null }, "warn");
 			sendResponse({
 				...ack,
 				error: "No valid saved state"
@@ -4125,6 +4372,10 @@
 		saveStateToStorage();
 		getState$7().taskList.forEach((task) => sendTaskUpdate(task));
 		console.log(`🔄 resumeAfterCacheClean: restored ${getState$7().taskList.length} tasks, resuming from index ${getState$7().currentPromptIndex}`);
+		logEvent("processing.resumed_after_cache_clean", "Flow processing resumed after cache clean", {
+			taskCount: getState$7().taskList.length,
+			currentPromptIndex: getState$7().currentPromptIndex
+		});
 		emit(EVENTS.QUEUE_NEXT);
 		sendResponse({
 			...ack,
@@ -4156,9 +4407,16 @@
 	chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 		const ack = { received: true };
 		if (message.action === "startProcessing") {
+			logEvent("processing.start_requested", "Start processing request received", {
+				useUnifiedQueue: Boolean(message.useUnifiedQueue),
+				queueTaskCount: message.queueTasks?.length || 0,
+				promptCount: message.prompts?.length || 0,
+				settings: message.settings || {}
+			});
 			verifyAuthenticationState().then((authState) => {
 				if (!authState.isLoggedIn) {
 					const error = authState.error || "Authentication required. Please sign in first.";
+					logEvent("processing.start_rejected", error, { authState }, "warn");
 					chrome.runtime.sendMessage({
 						action: "error",
 						error
@@ -4170,6 +4428,7 @@
 					return;
 				}
 				if (getState$7().isProcessing) {
+					logEvent("processing.start_ignored", "Start request ignored because processing is already active", { currentPromptIndex: getState$7().currentPromptIndex }, "warn");
 					sendResponse({
 						...ack,
 						error: "Already processing"
@@ -4212,6 +4471,12 @@
 					prompts
 				});
 				saveStateToStorage();
+				logEvent("processing.started", "Flow processing started", {
+					mode: message.useUnifiedQueue ? "unified" : "legacy",
+					taskCount: taskList.length,
+					prompts,
+					taskList
+				});
 				emit(EVENTS.QUEUE_NEXT);
 				sendResponse({
 					...ack,
@@ -4219,6 +4484,7 @@
 				});
 			}).catch((error) => {
 				const messageText = error?.message || "Could not start processing. Please try again.";
+				logError("processing.start_exception", error, { requestedMode: message.useUnifiedQueue ? "unified" : "legacy" });
 				chrome.runtime.sendMessage({
 					action: "error",
 					error: messageText
@@ -4231,14 +4497,17 @@
 			return true;
 		}
 		if (message.action === "resumeProcessing") {
+			logEvent("processing.resume_requested", "Resume processing requested");
 			restorePausedState(sendResponse, ack);
 			return true;
 		}
 		if (message.action === "resumeAfterCacheClean") {
+			logEvent("processing.resume_after_cache_clean_requested", "Resume after cache clean requested");
 			restoreAfterCacheClean(sendResponse, ack);
 			return true;
 		}
 		if (message.action === "stopProcessing") {
+			logEvent("processing.pause_requested", "Pause processing requested", { currentPromptIndex: getState$7().currentPromptIndex });
 			emit(EVENTS.PROCESSING_STOP);
 			clearCountdownTimer$1();
 			setState$4({
@@ -4265,6 +4534,10 @@
 			return false;
 		}
 		if (message.action === "terminateProcessing") {
+			logEvent("processing.terminate_requested", "Terminate processing requested", {
+				currentPromptIndex: getState$7().currentPromptIndex,
+				pendingTasks: getState$7().taskList?.length || 0
+			}, "warn");
 			chrome.runtime.sendMessage({ action: "resetPageZoom" }).catch(() => {});
 			setState$4({
 				isProcessing: false,
@@ -4353,5 +4626,6 @@
 	});
 	console.log("✅ Flow Automation bootstrap complete — all modules wired");
 	console.log("📦 Layers: core | interactions (+ imageUploader) | workflow | ui (+ contentDownloadManager)");
+	logEvent("content.bootstrap_complete", "Flow automation bootstrap complete", { href: window.location.href });
 	//#endregion
 })();
